@@ -14,6 +14,8 @@ export default function CreateLinkModal({ onClose, onSuccess }: Props) {
   const [customAlias, setCustomAlias] = useState('')
   const [expiresAt, setExpiresAt] = useState('')
   const [linkPassword, setLinkPassword] = useState('')
+  const [tags, setTags] = useState<string[]>([])
+  const [tagInput, setTagInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<any>(null)
   const [copied, setCopied] = useState(false)
@@ -34,6 +36,7 @@ export default function CreateLinkModal({ onClose, onSuccess }: Props) {
       if (customAlias.trim()) payload.customAlias = customAlias.trim()
       if (expiresAt) payload.expiresAt = expiresAt
       if (linkPassword.trim()) payload.linkPassword = linkPassword.trim()
+      if (tags.length > 0) payload.tags = tags
 
       const res = await api.post('/api/urls', payload)
       setResult(res.data.data.url)
@@ -45,6 +48,19 @@ export default function CreateLinkModal({ onClose, onSuccess }: Props) {
       setLoading(false)
     }
   }
+
+  const addTag = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      const t = tagInput.trim().toLowerCase()
+      if (t && !tags.includes(t)) {
+        setTags([...tags, t])
+        setTagInput('')
+      }
+    }
+  }
+
+  const removeTag = (t: string) => setTags(tags.filter(tag => tag !== t))
 
   const handleCopy = async () => {
     if (!result) return
@@ -128,7 +144,7 @@ export default function CreateLinkModal({ onClose, onSuccess }: Props) {
               </a>
             </div>
             <button
-              onClick={() => { setResult(null); setOriginalUrl(''); setCustomAlias(''); setExpiresAt(''); setLinkPassword('') }}
+              onClick={() => { setResult(null); setOriginalUrl(''); setCustomAlias(''); setExpiresAt(''); setLinkPassword(''); setTags([]) }}
               style={{ marginTop: '20px', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '12px', fontWeight: 800 }}
             >
               CREATE ANOTHER LINK
@@ -205,6 +221,32 @@ export default function CreateLinkModal({ onClose, onSuccess }: Props) {
                 placeholder="Secure access code (optional)"
                 value={linkPassword}
                 onChange={e => setLinkPassword(e.target.value)}
+                style={{
+                  width: '100%', background: 'var(--bg)', border: '1px solid var(--border)',
+                  color: 'var(--text-primary)', fontSize: '14px', padding: '14px 16px',
+                  borderRadius: '10px', outline: 'none', boxSizing: 'border-box'
+                }}
+              />
+            </div>
+
+            <div>
+              <label style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+                <Tag size={12} /> Organizational Tags <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(optional)</span>
+              </label>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: tags.length > 0 ? '12px' : '0' }}>
+                {tags.map(t => (
+                  <div key={t} style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(203,255,0,0.1)', border: '1px solid rgba(203,255,0,0.3)', borderRadius: '6px', padding: '4px 10px', fontSize: '11px', fontWeight: 800, color: 'var(--accent)' }}>
+                    {t}
+                    <X size={10} style={{ cursor: 'pointer' }} onClick={() => removeTag(t)} />
+                  </div>
+                ))}
+              </div>
+              <input
+                type="text"
+                placeholder="Type and press ENTR to add tags..."
+                value={tagInput}
+                onChange={e => setTagInput(e.target.value)}
+                onKeyDown={addTag}
                 style={{
                   width: '100%', background: 'var(--bg)', border: '1px solid var(--border)',
                   color: 'var(--text-primary)', fontSize: '14px', padding: '14px 16px',

@@ -16,6 +16,7 @@ export interface UrlAttrs {
   isActive?: boolean
   totalClicks?: number
   linkPassword?: string
+  tags?: string[]
 }
 
 export type UrlDocument = Document<unknown, unknown, UrlAttrs> &
@@ -29,6 +30,7 @@ export type UrlDocument = Document<unknown, unknown, UrlAttrs> &
     isActive: boolean
     totalClicks: number
     linkPassword?: string
+    tags: string[]
   }
 
 export type UrlModel = Model<UrlDocument>
@@ -83,6 +85,10 @@ const UrlSchema = new Schema<UrlDocument, UrlModel>(
       type: String,
       required: false,
       default: '',
+    },
+    tags: {
+      type: [String],
+      default: [],
     },
   },
   { timestamps: true },

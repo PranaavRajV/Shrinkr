@@ -23,12 +23,14 @@ const createUrlSchema = z.object({
     return arg
   }, z.date().min(new Date(), 'Expiry date must be in the future').optional()),
   linkPassword: z.string().max(50).optional(),
+  tags: z.array(z.string()).optional(),
 })
 
 const paginationSchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(10),
   search: z.string().optional(),
+  tag: z.string().optional(),
   sort: z.enum(['clicks', 'expiry', 'createdAt']).default('createdAt')
 })
 
@@ -57,7 +59,8 @@ const formatUrl = (url: any) => ({
   createdAt: url.createdAt,
   expiresAt: url.expiresAt,
   isActive: url.isActive,
-  hasPassword: !!url.linkPassword
+  hasPassword: !!url.linkPassword,
+  tags: url.tags || []
 })
 
 /**
@@ -95,7 +98,7 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
       return fail(res, 400, err.message, code, err.path[0] as string)
     }
 
-    const { originalUrl, customAlias, expiresAt, linkPassword } = parsed.data
+    const { originalUrl, customAlias, expiresAt, linkPassword, tags } = parsed.data
     const userId = req.user!.id
 
     if (customAlias) {
@@ -114,6 +117,7 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
       customAlias,
       expiresAt,
       linkPassword,
+      tags: tags || [],
       isActive: true
     })
 
@@ -133,11 +137,12 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
       return fail(res, 400, 'Invalid pagination or sorting parameters', 'INVALID_PAGINATION')
     }
 
-    const { page, limit, search, sort } = parsed.data
+    const { page, limit, search, tag, sort } = parsed.data
     const skip = (page - 1) * limit
     const userId = req.user!.id
-
+ 
     const query: any = { userId, isActive: true }
+    if (tag) query.tags = tag
     if (search) {
       query.$or = [
         { originalUrl: { $regex: search, $options: 'i' } },

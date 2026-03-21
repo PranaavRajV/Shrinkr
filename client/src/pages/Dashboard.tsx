@@ -3,7 +3,7 @@ import { AnimatePresence } from 'framer-motion'
 import { 
   Link2, MousePointer2, Plus, Copy, Trash2,
   Filter, BarChart2, Check,
-  TrendingUp, Star, ExternalLink, AlertCircle, Lock
+  TrendingUp, Star, ExternalLink, AlertCircle, Lock, Tag, X
 } from 'lucide-react'
 import api from '../lib/api'
 import toast from 'react-hot-toast'
@@ -27,11 +27,12 @@ export default function Dashboard() {
   const { addNotification } = useNotifications()
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const [filterTag, setFilterTag] = useState<string | null>(null)
 
   const fetchData = useCallback(async () => {
     try {
       const [uRes, sRes] = await Promise.all([
-        api.get('/api/urls'),
+        api.get('/api/urls', { params: { tag: filterTag } }),
         api.get('/api/users/me/stats')
       ])
       setUrls(uRes.data.data.urls || [])
@@ -43,7 +44,7 @@ export default function Dashboard() {
     }
   }, [])
 
-  useEffect(() => { fetchData() }, [fetchData])
+  useEffect(() => { fetchData() }, [fetchData, filterTag])
 
   const handleCopy = async (shortUrl: string, id: string) => {
     await navigator.clipboard.writeText(shortUrl)
@@ -195,7 +196,15 @@ export default function Dashboard() {
           <div style={{ padding: '32px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
               <h2 style={{ fontSize: '24px', fontWeight: 900, letterSpacing: '-0.02em' }}>Recent Links</h2>
-              <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginTop: '4px' }}>Manage and monitor your shortened URLs.</p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+                <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>Manage and monitor your shortened URLs.</p>
+                {filterTag && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--accent)', color: '#000', padding: '2px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: 900 }}>
+                    FILTER: {filterTag.toUpperCase()}
+                    <X size={10} style={{ cursor: 'pointer' }} onClick={() => setFilterTag(null)} />
+                  </div>
+                )}
+              </div>
             </div>
             <div style={{ display: 'flex', gap: '12px' }}>
               <button
@@ -262,9 +271,26 @@ export default function Dashboard() {
                         </div>
                       </td>
                       <td style={{ padding: '20px' }}>
-                        <div style={{ color: 'var(--text-muted)', fontSize: '13px', maxWidth: '280px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <div style={{ color: 'var(--text-muted)', fontSize: '13px', maxWidth: '280px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: (u.tags && u.tags.length > 0) ? '8px' : '0' }}>
                           {u.originalUrl}
                         </div>
+                        {u.tags && u.tags.length > 0 && (
+                          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                            {u.tags.map((t: string) => (
+                              <button
+                                key={t}
+                                onClick={() => setFilterTag(t)}
+                                style={{
+                                  background: filterTag === t ? 'var(--accent)' : 'rgba(255,255,255,0.05)',
+                                  color: filterTag === t ? '#000' : 'var(--text-muted)',
+                                  border: '1px solid ' + (filterTag === t ? 'var(--accent)' : 'var(--border)'),
+                                  padding: '2px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: 700,
+                                  cursor: 'pointer', transition: 'all 0.2s'
+                                }}
+                              >#{t}</button>
+                            ))}
+                          </div>
+                        )}
                       </td>
                       <td style={{ padding: '20px' }}>
                         <div style={{
