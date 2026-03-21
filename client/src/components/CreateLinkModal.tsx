@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { X, Link2, Tag, Calendar, Copy, Check, ExternalLink } from 'lucide-react'
+import { X, Link2, Tag, Calendar, Copy, Check, ExternalLink, Lock } from 'lucide-react'
 import api from '../lib/api'
 import toast from 'react-hot-toast'
 
@@ -13,6 +13,7 @@ export default function CreateLinkModal({ onClose, onSuccess }: Props) {
   const [originalUrl, setOriginalUrl] = useState('')
   const [customAlias, setCustomAlias] = useState('')
   const [expiresAt, setExpiresAt] = useState('')
+  const [linkPassword, setLinkPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<any>(null)
   const [copied, setCopied] = useState(false)
@@ -32,6 +33,7 @@ export default function CreateLinkModal({ onClose, onSuccess }: Props) {
       const payload: any = { originalUrl }
       if (customAlias.trim()) payload.customAlias = customAlias.trim()
       if (expiresAt) payload.expiresAt = expiresAt
+      if (linkPassword.trim()) payload.linkPassword = linkPassword.trim()
 
       const res = await api.post('/api/urls', payload)
       setResult(res.data.data.url)
@@ -126,7 +128,7 @@ export default function CreateLinkModal({ onClose, onSuccess }: Props) {
               </a>
             </div>
             <button
-              onClick={() => { setResult(null); setOriginalUrl(''); setCustomAlias(''); setExpiresAt('') }}
+              onClick={() => { setResult(null); setOriginalUrl(''); setCustomAlias(''); setExpiresAt(''); setLinkPassword('') }}
               style={{ marginTop: '20px', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '12px', fontWeight: 800 }}
             >
               CREATE ANOTHER LINK
@@ -190,6 +192,23 @@ export default function CreateLinkModal({ onClose, onSuccess }: Props) {
                   color: 'var(--text-primary)', fontSize: '14px', padding: '14px 16px',
                   borderRadius: '10px', outline: 'none', boxSizing: 'border-box',
                   colorScheme: 'dark'
+                }}
+              />
+            </div>
+
+            <div>
+              <label style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+                <Lock size={12} /> Access Password <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(optional)</span>
+              </label>
+              <input
+                type="password"
+                placeholder="Secure access code (optional)"
+                value={linkPassword}
+                onChange={e => setLinkPassword(e.target.value)}
+                style={{
+                  width: '100%', background: 'var(--bg)', border: '1px solid var(--border)',
+                  color: 'var(--text-primary)', fontSize: '14px', padding: '14px 16px',
+                  borderRadius: '10px', outline: 'none', boxSizing: 'border-box'
                 }}
               />
             </div>

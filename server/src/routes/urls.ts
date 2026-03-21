@@ -21,7 +21,8 @@ const createUrlSchema = z.object({
   expiresAt: z.preprocess((arg) => {
     if (typeof arg === 'string' || arg instanceof Date) return new Date(arg)
     return arg
-  }, z.date().min(new Date(), 'Expiry date must be in the future').optional())
+  }, z.date().min(new Date(), 'Expiry date must be in the future').optional()),
+  linkPassword: z.string().max(50).optional(),
 })
 
 const paginationSchema = z.object({
@@ -55,7 +56,8 @@ const formatUrl = (url: any) => ({
   totalClicks: url.totalClicks || 0,
   createdAt: url.createdAt,
   expiresAt: url.expiresAt,
-  isActive: url.isActive
+  isActive: url.isActive,
+  hasPassword: !!url.linkPassword
 })
 
 /**
@@ -93,7 +95,7 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
       return fail(res, 400, err.message, code, err.path[0] as string)
     }
 
-    const { originalUrl, customAlias, expiresAt } = parsed.data
+    const { originalUrl, customAlias, expiresAt, linkPassword } = parsed.data
     const userId = req.user!.id
 
     if (customAlias) {
@@ -111,6 +113,7 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
       shortCode,
       customAlias,
       expiresAt,
+      linkPassword,
       isActive: true
     })
 

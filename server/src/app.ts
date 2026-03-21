@@ -13,6 +13,7 @@ import { Url } from './models/Url'
 import { parseUserAgent } from './utils/deviceParser'
 import { fail } from './utils/response'
 import { renderErrorPage } from './utils/errorPage'
+import { renderPasswordPage } from './utils/passwordPage'
 
 import authRoutes from './routes/auth'
 import urlRoutes from './routes/urls'
@@ -101,15 +102,29 @@ app.get('/:shortCode', async (req, res, next) => {
       return res.status(410).send(renderErrorPage(410, 'The link you are looking for is no longer active', 'URL_INACTIVE'))
     }
 
+    // ─── NEW: Password Check ──────────────────────────────────────────────────
+    if (url.linkPassword) {
+      const providedPwd = req.query.pwd as string
+      if (!providedPwd) {
+        return res.status(200).send(renderPasswordPage(shortCode))
+      }
+      if (providedPwd !== url.linkPassword) {
+        return res.status(200).send(renderPasswordPage(shortCode, 'INCORRECT KEY'))
+      }
+    }
+    // ──────────────────────────────────────────────────────────────────────────
+
     // 3. Expiry Check
     if (url.expiresAt && url.expiresAt < new Date()) {
       return res.status(410).send(renderErrorPage(410, 'This link has expired and is no longer available', 'URL_EXPIRED'))
     }
 
-    // 4. Populate Cache (fire-and-forget)
-    getRedisClient().then(redis => {
-      redis.set(`url:${shortCode}`, url.originalUrl, 'EX', 86400)
-    }).catch(() => {})
+    // 4. Populate Cache (fire-and-forget) - ONLY IF NO PASSWORD
+    if (!url.linkPassword) {
+      getRedisClient().then(redis => {
+        redis.set(`url:${shortCode}`, url.originalUrl, 'EX', 86400)
+      }).catch(() => {})
+    }
 
     // 5. Track Click (fire-and-forget)
     updateAnalytics(shortCode, req, url._id.toString())

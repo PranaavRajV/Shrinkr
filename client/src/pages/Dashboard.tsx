@@ -3,7 +3,7 @@ import { AnimatePresence } from 'framer-motion'
 import { 
   Link2, MousePointer2, Plus, Copy, Trash2,
   Filter, BarChart2, Check,
-  TrendingUp, Star, ExternalLink, AlertCircle
+  TrendingUp, Star, ExternalLink, AlertCircle, Lock
 } from 'lucide-react'
 import api from '../lib/api'
 import toast from 'react-hot-toast'
@@ -253,11 +253,12 @@ export default function Dashboard() {
                   {urls.slice(0, 10).map((u) => (
                     <tr key={u.id} style={{ borderBottom: '1px solid var(--border)' }} className="table-row-hover">
                       <td style={{ padding: '20px 20px' }}>
-                        <div style={{ fontWeight: 800, color: '#fff', fontSize: '14px' }}>
+                        <div style={{ fontWeight: 800, color: '#fff', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <a href={u.shortUrl} target="_blank" rel="noreferrer" style={{ color: 'inherit', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px' }}>
                             {baseUrl}/{u.shortCode}
                             <ExternalLink size={12} style={{ opacity: 0.4 }} />
                           </a>
+                          {u.hasPassword && <Lock size={12} color="var(--accent)" style={{ opacity: 0.8 }} />}
                         </div>
                       </td>
                       <td style={{ padding: '20px' }}>
