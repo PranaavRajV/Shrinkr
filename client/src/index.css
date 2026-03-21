@@ -60,11 +60,18 @@ body {
   -moz-osx-font-smoothing: grayscale;
   min-height: 100vh;
   overflow-x: hidden;
-  cursor: none; /* Hide default cursor */
 }
 
-a, button, input, textarea, [role="button"] {
-  cursor: none !important; /* Force hide on interactive elements */
+@media (pointer: fine) {
+  * {
+    cursor: none !important;
+  }
+}
+
+@media (pointer: coarse) {
+  * {
+    cursor: auto !important;
+  }
 }
 
 #root {

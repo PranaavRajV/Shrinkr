@@ -1,121 +1,151 @@
-import { useEffect, useState } from 'react'
-import { motion, useSpring, useMotionValue } from 'framer-motion'
+import { useEffect, useRef, useState } from 'react'
 
 export default function Cursor() {
+  const dotRef = useRef<HTMLDivElement>(null)
+  const ringRef = useRef<HTMLDivElement>(null)
   const [isHovering, setIsHovering] = useState(false)
-  const [isText, setIsText] = useState(false)
-  const [isClicked, setIsClicked] = useState(false)
-  
-  const mouseX = useMotionValue(-100)
-  const mouseY = useMotionValue(-100)
-  
-  const springConfig = { damping: 20, stiffness: 150, mass: 0.5 }
-  const ringX = useSpring(mouseX, springConfig)
-  const ringY = useSpring(mouseY, springConfig)
+  const [isClicking, setIsClicking] = useState(false)
+  const [isVisible, setIsVisible] = useState(false)
+
+  const mouse = useRef({ x: 0, y: 0 })
+  const ringPos = useRef({ x: 0, y: 0 })
+  const rafRef = useRef<number>(0)
+
+  // Hide on mobile/touch devices
+  const isTouchDevice = () => {
+    return window.matchMedia('(pointer: coarse)').matches
+  }
 
   useEffect(() => {
-    if (window.matchMedia('(pointer:coarse)').matches) return
+    if (isTouchDevice()) return
 
-    const moveMouse = (e: MouseEvent) => {
-      mouseX.set(e.clientX)
-      mouseY.set(e.clientY)
+    const onMouseMove = (e: MouseEvent) => {
+      mouse.current = { x: e.clientX, y: e.clientY }
+
+      if (!isVisible) setIsVisible(true)
+
+      // Move dot instantly
+      if (dotRef.current) {
+        dotRef.current.style.transform =
+          `translate(${e.clientX - 4}px, ${e.clientY - 4}px)`
+      }
     }
 
-    const mouseDown = () => setIsClicked(true)
-    const mouseUp = () => setIsClicked(false)
+    const onMouseLeave = () => setIsVisible(false)
+    const onMouseEnter = () => setIsVisible(true)
 
-    const mouseOver = (e: MouseEvent) => {
+    const onMouseDown = () => setIsClicking(true)
+    const onMouseUp = () => setIsClicking(false)
+
+    // Smooth ring follow using RAF
+    const animateRing = () => {
+      const lerp = (a: number, b: number, t: number) =>
+        a + (b - a) * t
+
+      ringPos.current.x = lerp(
+        ringPos.current.x,
+        mouse.current.x,
+        0.12
+      )
+      ringPos.current.y = lerp(
+        ringPos.current.y,
+        mouse.current.y,
+        0.12
+      )
+
+      if (ringRef.current) {
+        ringRef.current.style.transform =
+          `translate(${ringPos.current.x - 16}px, ${ringPos.current.y - 16}px)`
+      }
+
+      rafRef.current = requestAnimationFrame(animateRing)
+    }
+
+    // Detect hoverable elements
+    const onMouseOver = (e: MouseEvent) => {
       const target = e.target as HTMLElement
-      const isHover = !!target.closest('[data-cursor="hover"]')
-      const isTextArea = !!target.closest('[data-cursor="text"]')
-      
-      setIsHovering(isHover)
-      setIsText(isTextArea)
+      const isClickable =
+        target.closest('button') ||
+        target.closest('a') ||
+        target.closest('[data-cursor="hover"]') ||
+        target.closest('input') ||
+        target.closest('textarea') ||
+        target.closest('select') ||
+        target.getAttribute('onclick') ||
+        window.getComputedStyle(target).cursor === 'pointer'
+
+      setIsHovering(!!isClickable)
     }
 
-    // Auto-apply data-cursor attributes
-    const updateInteractiveElements = () => {
-      const interactives = document.querySelectorAll('button, a, [role="button"]')
-      interactives.forEach(el => {
-        if (!el.hasAttribute('data-cursor')) {
-          el.setAttribute('data-cursor', 'hover')
-        }
-      })
+    document.addEventListener('mousemove', onMouseMove)
+    document.addEventListener('mouseleave', onMouseLeave)
+    document.addEventListener('mouseenter', onMouseEnter)
+    document.addEventListener('mousedown', onMouseDown)
+    document.addEventListener('mouseup', onMouseUp)
+    document.addEventListener('mouseover', onMouseOver)
 
-      // Also detect onClick handlers if possible (limited without specific framework hooks, 
-      // but common practice for this kind of effect)
-      // For this implementation, we rely on the above common tags
-    }
-
-    window.addEventListener('mousemove', moveMouse)
-    window.addEventListener('mousedown', mouseDown)
-    window.addEventListener('mouseup', mouseUp)
-    window.addEventListener('mouseover', mouseOver)
-    
-    const observer = new MutationObserver(updateInteractiveElements)
-    observer.observe(document.body, { childList: true, subtree: true })
-    updateInteractiveElements()
+    rafRef.current = requestAnimationFrame(animateRing)
 
     return () => {
-      window.removeEventListener('mousemove', moveMouse)
-      window.removeEventListener('mousedown', mouseDown)
-      window.removeEventListener('mouseup', mouseUp)
-      window.removeEventListener('mouseover', mouseOver)
-      observer.disconnect()
+      document.removeEventListener('mousemove', onMouseMove)
+      document.removeEventListener('mouseleave', onMouseLeave)
+      document.removeEventListener('mouseenter', onMouseEnter)
+      document.removeEventListener('mousedown', onMouseDown)
+      document.removeEventListener('mouseup', onMouseUp)
+      document.removeEventListener('mouseover', onMouseOver)
+      if (rafRef.current) cancelAnimationFrame(rafRef.current)
     }
-  }, [mouseX, mouseY])
+  }, [isVisible])
 
-  if (typeof window !== 'undefined' && window.matchMedia('(pointer:coarse)').matches) return null
-
-  const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  if (prefersReduced) return null
+  if (isTouchDevice()) return null
 
   return (
-    <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 99999 }}>
-      {/* Main Dot */}
-      <motion.div
+    <>
+      {/* Small dot — follows instantly */}
+      <div
+        ref={dotRef}
         style={{
-          position: 'fixed', left: 0, top: 0,
-          width: 8, height: 8,
-          background: 'var(--accent)',
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '8px',
+          height: '8px',
           borderRadius: '50%',
-          x: mouseX, y: mouseY,
-          translateX: '-50%', translateY: '-50%',
+          backgroundColor: 'var(--accent, #DFE104)',
+          pointerEvents: 'none',
+          zIndex: 999999,
+          opacity: isVisible ? 1 : 0,
+          transform: isClicking ? 'scale(0.6)' : 'scale(1)',
+          transition: 'opacity 200ms, transform 100ms',
+          willChange: 'transform',
         }}
-        animate={{
-          scale: isHovering ? 0 : isClicked ? 0.8 : 1,
-          opacity: isHovering ? 0 : 1
-        }}
-        transition={{ duration: 0.15 }}
       />
 
-      {/* Follower Ring */}
-      <motion.div
+      {/* Ring — follows with smooth lag */}
+      <div
+        ref={ringRef}
         style={{
-          position: 'fixed', left: 0, top: 0,
-          width: 36, height: 36,
-          border: '1.5px solid var(--accent)',
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '32px',
+          height: '32px',
           borderRadius: '50%',
-          x: ringX, y: ringY,
-          translateX: '-50%', translateY: '-50%',
+          border: `1.5px solid var(--accent, #DFE104)`,
+          pointerEvents: 'none',
+          zIndex: 999998,
+          opacity: isVisible
+            ? isHovering ? 0.6 : 0.3
+            : 0,
+          transform: isHovering
+            ? 'scale(1.5)'
+            : isClicking
+            ? 'scale(0.8)'
+            : 'scale(1)',
+          transition: 'opacity 200ms, transform 200ms ease',
+          willChange: 'transform',
         }}
-        animate={{
-          scale: isHovering ? 2.5 : isClicked ? 0.8 : 1,
-          scaleX: isText ? 3 : isHovering ? 2.5 : isClicked ? 0.8 : 1,
-          scaleY: isText ? 0.1 : isHovering ? 2.5 : isClicked ? 0.8 : 1,
-          background: isHovering ? 'rgba(203, 255, 0, 0.15)' : 'transparent',
-          borderColor: isText ? 'transparent' : 'var(--accent)',
-          backgroundColor: isText ? 'var(--accent)' : isHovering ? 'rgba(203, 255, 0, 0.15)' : 'transparent'
-        }}
-        transition={{ duration: 0.2 }}
       />
-      
-      <style>{`
-        body, a, button, input, textarea { cursor: none !important; }
-        @media (pointer: coarse) {
-          body, a, button, input, textarea { cursor: auto !important; }
-        }
-      `}</style>
-    </div>
+    </>
   )
 }

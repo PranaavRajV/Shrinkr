@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import { AuthProvider } from './contexts/AuthContext'
-import { Suspense, lazy, Component, useEffect } from 'react'
+import { Suspense, lazy, Component } from 'react'
 import Cursor from './components/Cursor'
 import PageLoader from './components/PageLoader'
 import { useSmoothScroll } from './hooks/useSmoothScroll'
@@ -140,7 +140,7 @@ import { GoogleOAuthProvider } from '@react-oauth/google'
 import { NotificationProvider } from './contexts/NotificationContext'
 
 // ─── App ──────────────────────────────────────────────────────────────────────
-export default function App() {
+export function App() {
   const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || 'dummy-client-id'
   const location = useLocation()
   useSmoothScroll()
@@ -156,7 +156,6 @@ export default function App() {
   return (
     <GoogleOAuthProvider clientId={clientId}>
       <PageLoader />
-      <Cursor />
       {showProgress && (
         <motion.div
           style={{
@@ -194,8 +193,11 @@ export default function App() {
 
 export function AppWrapper() {
   return (
-    <BrowserRouter>
-      <App />
-    </BrowserRouter>
+    <>
+      <Cursor />
+      <BrowserRouter>
+        <App />
+      </BrowserRouter>
+    </>
   )
 }
