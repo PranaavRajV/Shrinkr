@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import { AuthProvider } from './contexts/AuthContext'
 import { Suspense, lazy, Component } from 'react'
+import CustomCursor from './components/CustomCursor'
 import type { ReactNode } from 'react'
 
 // Lazy-loaded pages
@@ -147,6 +148,7 @@ export default function App() {
         <style>{loaderStyles}</style>
         <AuthProvider>
           <NotificationProvider>
+          <CustomCursor />
           <AppRoutes />
           <Toaster
             position="bottom-right"
