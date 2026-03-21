@@ -53,9 +53,11 @@ export default function CreateLinkModal({ onClose, onSuccess }: Props) {
     if (e.key === 'Enter') {
       e.preventDefault()
       const t = tagInput.trim().toLowerCase()
-      if (t && !tags.includes(t)) {
+      if (t && !tags.includes(t) && tags.length < 5) {
         setTags([...tags, t])
         setTagInput('')
+      } else if (tags.length >= 5) {
+        toast.error('Maximum 5 tags allowed')
       }
     }
   }
@@ -243,16 +245,20 @@ export default function CreateLinkModal({ onClose, onSuccess }: Props) {
               </div>
               <input
                 type="text"
-                placeholder="Type and press ENTR to add tags..."
+                placeholder={tags.length >= 5 ? "Tag limit reached" : "Type and press ENTR to add tags..."}
+                disabled={tags.length >= 5}
                 value={tagInput}
                 onChange={e => setTagInput(e.target.value)}
                 onKeyDown={addTag}
                 style={{
                   width: '100%', background: 'var(--bg)', border: '1px solid var(--border)',
                   color: 'var(--text-primary)', fontSize: '14px', padding: '14px 16px',
-                  borderRadius: '10px', outline: 'none', boxSizing: 'border-box'
+                  borderRadius: '10px', outline: 'none', boxSizing: 'border-box',
+                  opacity: tags.length >= 5 ? 0.6 : 1,
+                  cursor: tags.length >= 5 ? 'not-allowed' : 'text'
                 }}
               />
+              <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '6px', textAlign: 'right', fontWeight: 700 }}>{tags.length}/5 TAGS</div>
             </div>
 
             <button

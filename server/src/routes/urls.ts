@@ -22,8 +22,8 @@ const createUrlSchema = z.object({
     if (typeof arg === 'string' || arg instanceof Date) return new Date(arg)
     return arg
   }, z.date().min(new Date(), 'Expiry date must be in the future').optional()),
-  linkPassword: z.string().max(50).optional(),
-  tags: z.array(z.string()).optional(),
+  linkPassword: z.string().max(50).optional().nullable(),
+  tags: z.array(z.string()).max(5, 'Maximum 5 tags allowed').optional(),
 })
 
 const paginationSchema = z.object({
@@ -39,8 +39,10 @@ const updateUrlSchema = z.object({
   expiresAt: z.preprocess((arg) => {
     if (typeof arg === 'string' || arg instanceof Date) return new Date(arg)
     return arg
-  }, z.date().min(new Date(), 'Expiry date must be in the future').optional())
-}).refine(data => data.originalUrl || data.expiresAt, {
+  }, z.date().min(new Date(), 'Expiry date must be in the future').optional()),
+  linkPassword: z.string().max(50).nullable().optional(),
+  tags: z.array(z.string()).max(5).optional()
+}).refine(data => data.originalUrl || data.expiresAt || data.linkPassword !== undefined || data.tags !== undefined, {
   message: 'At least one field must be provided for update'
 })
 
@@ -98,7 +100,17 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
       return fail(res, 400, err.message, code, err.path[0] as string)
     }
 
-    const { originalUrl, customAlias, expiresAt, linkPassword, tags } = parsed.data
+    const { originalUrl, customAlias, expiresAt, linkPassword } = parsed.data
+    let { tags } = parsed.data
+    
+    if (tags && Array.isArray(tags)) {
+      tags = tags
+        .map(t => t.trim().toLowerCase())
+        .filter(t => t.length > 0)
+        .slice(0, 5)
+    } else {
+      tags = []
+    }
     const userId = req.user!.id
 
     if (customAlias) {
@@ -196,6 +208,17 @@ router.patch('/:shortCode', async (req: Request, res: Response, next: NextFuncti
 
     if (parsed.data.originalUrl) url.originalUrl = parsed.data.originalUrl
     if (parsed.data.expiresAt) url.expiresAt = parsed.data.expiresAt
+    
+    if (parsed.data.linkPassword !== undefined) {
+      url.linkPassword = parsed.data.linkPassword || ''
+    }
+    
+    if (parsed.data.tags !== undefined) {
+      url.tags = parsed.data.tags
+        .map(t => t.trim().toLowerCase())
+        .filter(t => t.length > 0)
+        .slice(0, 5)
+    }
 
     await url.save()
 

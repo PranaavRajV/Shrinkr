@@ -3,7 +3,7 @@ import { AnimatePresence } from 'framer-motion'
 import { 
   Link2, MousePointer2, Plus, Copy, Trash2,
   Filter, BarChart2, Check,
-  TrendingUp, Star, ExternalLink, AlertCircle, Lock, Tag, X
+  TrendingUp, Star, ExternalLink, AlertCircle, Lock, Tag, X, Search
 } from 'lucide-react'
 import api from '../lib/api'
 import toast from 'react-hot-toast'
@@ -28,6 +28,7 @@ export default function Dashboard() {
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [filterTag, setFilterTag] = useState<string | null>(null)
+  const [search, setSearch] = useState('')
 
   const fetchData = useCallback(async () => {
     try {
@@ -42,7 +43,15 @@ export default function Dashboard() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [filterTag])
+
+  const filteredUrls = urls.filter(url => {
+    const matchSearch = !search ||
+      url.originalUrl.toLowerCase().includes(search.toLowerCase()) ||
+      url.shortCode.toLowerCase().includes(search.toLowerCase())
+    const matchTag = !filterTag || url.tags?.includes(filterTag)
+    return matchSearch && matchTag
+  })
 
   useEffect(() => { fetchData() }, [fetchData, filterTag])
 
@@ -196,17 +205,35 @@ export default function Dashboard() {
           <div style={{ padding: '32px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
               <h2 style={{ fontSize: '24px', fontWeight: 900, letterSpacing: '-0.02em' }}>Recent Links</h2>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
-                <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>Manage and monitor your shortened URLs.</p>
+              <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginTop: '4px' }}>Manage and monitor your shortened URLs.</p>
+            </div>
+            <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+              {/* Search Bar */}
+              <div style={{ position: 'relative' }}>
+                <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                <input
+                  type="text"
+                  placeholder="Seach links..."
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  style={{
+                    background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '8px',
+                    padding: '10px 12px 10px 36px', fontSize: '12px', color: '#fff', outline: 'none',
+                    width: '240px'
+                  }}
+                />
                 {filterTag && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--accent)', color: '#000', padding: '2px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: 900 }}>
-                    FILTER: {filterTag.toUpperCase()}
-                    <X size={10} style={{ cursor: 'pointer' }} onClick={() => setFilterTag(null)} />
+                  <div style={{ 
+                    position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)',
+                    display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--accent)', 
+                    color: '#000', padding: '2px 8px', borderRadius: '4px', fontSize: '9px', fontWeight: 900 
+                  }}>
+                    {filterTag.toUpperCase()}
+                    <X size={8} style={{ cursor: 'pointer' }} onClick={() => setFilterTag(null)} />
                   </div>
                 )}
               </div>
-            </div>
-            <div style={{ display: 'flex', gap: '12px' }}>
+              <div style={{ display: 'flex', gap: '12px' }}>
               <button
                 onClick={() => setShowBulk(true)}
                 style={{
@@ -229,8 +256,9 @@ export default function Dashboard() {
               </button>
             </div>
           </div>
+        </div>
 
-          {loading ? (
+        {loading ? (
             <div style={{ padding: '60px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px', fontWeight: 800, letterSpacing: '0.1em' }}>
               LOADING...
             </div>
@@ -259,7 +287,7 @@ export default function Dashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {urls.slice(0, 10).map((u) => (
+                  {filteredUrls.slice(0, 10).map((u) => (
                     <tr key={u.id} style={{ borderBottom: '1px solid var(--border)' }} className="table-row-hover">
                       <td style={{ padding: '20px 20px' }}>
                         <div style={{ fontWeight: 800, color: '#fff', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -267,7 +295,11 @@ export default function Dashboard() {
                             {baseUrl}/{u.shortCode}
                             <ExternalLink size={12} style={{ opacity: 0.4 }} />
                           </a>
-                          {u.hasPassword && <Lock size={12} color="var(--accent)" style={{ opacity: 0.8 }} />}
+                          {u.hasPassword && (
+                            <span title="Password protected">
+                              <Lock size={12} color="var(--accent)" style={{ opacity: 0.8 }} />
+                            </span>
+                          )}
                         </div>
                       </td>
                       <td style={{ padding: '20px' }}>

@@ -15,7 +15,7 @@ export interface UrlAttrs {
   expiresAt?: Date
   isActive?: boolean
   totalClicks?: number
-  linkPassword?: string
+  linkPassword?: string | null
   tags?: string[]
 }
 
@@ -29,7 +29,7 @@ export type UrlDocument = Document<unknown, unknown, UrlAttrs> &
     updatedAt: Date
     isActive: boolean
     totalClicks: number
-    linkPassword?: string
+    linkPassword?: string | null
     tags: string[]
   }
 
@@ -84,7 +84,7 @@ const UrlSchema = new Schema<UrlDocument, UrlModel>(
     linkPassword: {
       type: String,
       required: false,
-      default: '',
+      default: null,
     },
     tags: {
       type: [String],
