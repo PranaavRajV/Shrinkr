@@ -149,7 +149,7 @@ function updateAnalytics(shortCode: string, req: express.Request, urlId?: string
 }
 
 // 6. SPA Catch-all (Redirect all other routes to frontend)
-app.get('*', (req, res) => {
+app.get('/*', (req, res) => {
   res.sendFile(path.join(clientPath, 'index.html'))
 })
 
