@@ -8,13 +8,13 @@ import { ok, fail } from '../utils/response'
 const router = express.Router()
 
 /**
- * @route GET /api/analytics/public/:shortCode
+ * @route GET /api/analytics/:shortCode/public
  * Public stats — no auth required
  */
-router.get('/public/:shortCode', async (req: Request, res: Response, next: NextFunction) => {
+router.get('/:shortCode/public', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { shortCode } = req.params
-    const url = await Url.findOne({ shortCode }).select('_id totalClicks createdAt').lean()
+    const url = await Url.findOne({ shortCode }).select('_id totalClicks createdAt originalUrl shortCode').lean()
     if (!url) return fail(res, 404, 'URL not found', 'URL_NOT_FOUND')
 
     const [lastClick, topDevices] = await Promise.all([
@@ -27,10 +27,14 @@ router.get('/public/:shortCode', async (req: Request, res: Response, next: NextF
       ])
     ])
 
+    const baseUrl = process.env.BASE_URL || 'http://localhost:4001'
+
     return ok(res, {
       totalClicks: url.totalClicks,
       lastVisited: lastClick?.timestamp || null,
       createdAt: url.createdAt,
+      shortUrl: `${baseUrl}/${url.shortCode}`,
+      originalUrl: url.originalUrl,
       topDevices
     })
   } catch (err) {
@@ -106,13 +110,16 @@ router.get('/:shortCode', requireAuth, async (req: Request, res: Response, next:
       return fail(res, 403, 'You do not have permission to view this data', 'FORBIDDEN')
     }
 
-    const sevenDaysAgo = new Date()
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
-    sevenDaysAgo.setHours(0, 0, 0, 0)
+    const days = req.query.days === '30' ? 30 : 7
+    const startDate = new Date()
+    startDate.setDate(startDate.getDate() - days)
+    startDate.setHours(0, 0, 0, 0)
 
-    const [clicksByDay, topDevices, topCountries, recentClicks] = await Promise.all([
+    const [realClicks, botClicks, clicksByDay, topDevices, topCountries, topBrowsers, recentClicks, clicksByHour, clicksByDayOfWeek, topReferrers, referrerMediums] = await Promise.all([
+      Click.countDocuments({ urlId: url._id, isBot: false }),
+      Click.countDocuments({ urlId: url._id, isBot: true }),
       Click.aggregate([
-        { $match: { urlId: url._id, timestamp: { $gte: sevenDaysAgo } } },
+        { $match: { urlId: url._id, timestamp: { $gte: startDate }, isBot: false } },
         { $group: {
           _id: { $dateToString: { format: '%Y-%m-%d', date: '$timestamp' } },
           count: { $sum: 1 }
@@ -120,40 +127,86 @@ router.get('/:shortCode', requireAuth, async (req: Request, res: Response, next:
         { $sort: { _id: 1 } }
       ]),
       Click.aggregate([
-        { $match: { urlId: url._id } },
+        { $match: { urlId: url._id, isBot: false } },
         { $group: { _id: '$device', count: { $sum: 1 } } },
-        { $sort: { count: -1 } }, { $limit: 5 }
+        { $sort: { count: -1 } }, { $limit: 10 }
       ]),
       Click.aggregate([
-        { $match: { urlId: url._id } },
+        { $match: { urlId: url._id, isBot: false } },
         { $group: { _id: '$country', count: { $sum: 1 } } },
-        { $sort: { count: -1 } }, { $limit: 5 }
+        { $sort: { count: -1 } }, { $limit: 10 }
+      ]),
+      Click.aggregate([
+        { $match: { urlId: url._id, isBot: false } },
+        { $group: { _id: '$browser', count: { $sum: 1 } } },
+        { $sort: { count: -1 } }, { $limit: 10 }
       ]),
       Click.find({ urlId: url._id })
         .sort({ timestamp: -1 })
-        .limit(10)
-        .lean()
+        .limit(50)
+        .lean(),
+      Click.aggregate([
+        { $match: { urlId: url._id, isBot: false } },
+        { $group: { _id: { $hour: '$timestamp' }, count: { $sum: 1 } } },
+        { $sort: { _id: 1 } }
+      ]),
+      Click.aggregate([
+        { $match: { urlId: url._id, isBot: false } },
+        { $group: { _id: { $dayOfWeek: '$timestamp' }, count: { $sum: 1 } } },
+        { $sort: { _id: 1 } }
+      ]),
+      Click.aggregate([
+        { $match: { urlId: url._id, isBot: false } },
+        { $group: { _id: '$referrerSource', count: { $sum: 1 }, medium: { $first: '$referrerMedium' } } },
+        { $sort: { count: -1 } },
+        { $limit: 10 }
+      ]),
+      Click.aggregate([
+        { $match: { urlId: url._id, isBot: false } },
+        { $group: { _id: '$referrerMedium', count: { $sum: 1 } } },
+        { $sort: { count: -1 } }
+      ])
     ])
 
-    // Fill exactly 7 days (including days with 0 clicks)
-    const clicksLast7Days = []
-    for (let i = 6; i >= 0; i--) {
+    // Fill exactly N days (including days with 0 clicks)
+    const clicksTrend = []
+    for (let i = days - 1; i >= 0; i--) {
       const d = new Date()
       d.setDate(d.getDate() - i)
       const dateStr = d.toISOString().split('T')[0]
       const found = clicksByDay.find(c => c._id === dateStr)
-      clicksLast7Days.push({ date: dateStr, count: found ? found.count : 0 })
+      clicksTrend.push({ date: dateStr, count: found ? found.count : 0 })
     }
+
+    // Format Heatmap Data
+    const hourData = Array.from({ length: 24 }, (_, h) => {
+      const found = clicksByHour.find(c => c._id === h)
+      return { hour: h, count: found?.count || 0 }
+    })
+
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+    const dayData = Array.from({ length: 7 }, (_, d) => {
+      const found = clicksByDayOfWeek.find(c => c._id === d + 1)
+      return { day: dayNames[d], count: found?.count || 0 }
+    })
 
     return ok(res, {
       shortCode:      url.shortCode,
       originalUrl:    url.originalUrl,
       totalClicks:    url.totalClicks,
-      lastVisited:    recentClicks[0]?.timestamp || null,
+      realClicks,
+      botClicks,
+      lastVisited:    recentClicks.find(c => !c.isBot)?.timestamp || null,
       createdAt:      url.createdAt,
-      clicksLast7Days,
+      ogData:         url.ogData || null,
+      clicksTrend,
       topDevices,
       topCountries,
+      topBrowsers,
+      topReferrers,
+      referrerMediums,
+      hourData,
+      dayData,
       recentClicks
     })
   } catch (err) {

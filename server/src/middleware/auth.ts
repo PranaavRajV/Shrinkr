@@ -3,6 +3,8 @@ import jwt from 'jsonwebtoken'
 import { User } from '../models/User'
 import { fail } from '../utils/response'
 
+import { ApiKeyDocument } from '../models/ApiKey'
+
 export interface AuthUser {
   id: string
   email: string
@@ -12,12 +14,22 @@ declare global {
   namespace Express {
     interface Request {
       user?: AuthUser
+      apiKey?: ApiKeyDocument
     }
   }
 }
 
+import { apiKeyAuth } from './apiKeyAuth'
+
 export async function requireAuth(req: Request, res: Response, next: NextFunction) {
   try {
+    // 1. Try API Key Auth First
+    const apiKey = (req.headers['x-api-key'] as string) || (req.query.api_key as string)
+    if (apiKey) {
+      return apiKeyAuth(req, res, next)
+    }
+
+    // 2. Fallback to JWT Auth
     const authHeader = req.headers.authorization
 
     if (!authHeader) {

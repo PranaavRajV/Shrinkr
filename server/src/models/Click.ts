@@ -15,6 +15,10 @@ export interface ClickAttrs {
   device: DeviceType
   browser: string
   referrer?: string
+  referrerSource?: string
+  referrerMedium?: string
+  isBot?: boolean
+  botReason?: string
 }
 
 export type ClickDocument = Document<unknown, unknown, ClickAttrs> &
@@ -72,12 +76,35 @@ const ClickSchema = new Schema<ClickDocument, ClickModel>(
       required: false,
       trim: true,
     },
+    referrerSource: {
+      type: String,
+      default: 'direct',
+      trim: true,
+      index: true
+    },
+    referrerMedium: {
+      type: String,
+      default: 'direct',
+      trim: true,
+      index: true
+    },
+    isBot: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    botReason: {
+      type: String,
+      default: '',
+    },
   },
   { timestamps: false },
 )
 
-// Fast analytics queries by URL and time.
+// Optimized indices for heatmap and referrer analysis
 ClickSchema.index({ urlId: 1, timestamp: -1 })
+ClickSchema.index({ urlId: 1, referrerSource: 1 })
+ClickSchema.index({ urlId: 1, referrerMedium: 1 })
 
 export const Click = model<ClickDocument, ClickModel>('Click', ClickSchema)
 

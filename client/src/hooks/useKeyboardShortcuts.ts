@@ -1,40 +1,42 @@
 import { useEffect } from 'react'
 
-type ShortcutHandlers = {
-  n?: () => void
-  slash?: () => void
-  esc?: () => void
+interface Shortcut {
+  key: string
+  ctrl?: boolean
+  shift?: boolean
+  description: string
+  handler: () => void
 }
 
-export function useKeyboardShortcuts(handlers: ShortcutHandlers) {
+export function useKeyboardShortcuts(shortcuts: Shortcut[]) {
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Ignore if user is typing in an input
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
-        if (e.key === 'Escape' && handlers.esc) {
-          handlers.esc()
-        }
+    const handler = (e: KeyboardEvent) => {
+      // Don't trigger shortcuts if user is typing in an input
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement ||
+        e.target instanceof HTMLSelectElement
+      ) {
         return
       }
 
-      switch (e.key) {
-        case 'n':
-        case 'N':
-          if (handlers.n) handlers.n()
-          break
-        case '/':
-          if (handlers.slash) {
-            e.preventDefault()
-            handlers.slash()
-          }
-          break
-        case 'Escape':
-          if (handlers.esc) handlers.esc()
-          break
+      for (const s of shortcuts) {
+        const ctrlMatch = s.ctrl ? (e.ctrlKey || e.metaKey) : true
+        const shiftMatch = s.shift ? e.shiftKey : true
+        
+        if (
+          e.key.toLowerCase() === s.key.toLowerCase() &&
+          ctrlMatch &&
+          shiftMatch
+        ) {
+          e.preventDefault()
+          s.handler()
+          return
+        }
       }
     }
 
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [handlers])
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
+  }, [shortcuts])
 }

@@ -1,9 +1,13 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { useTheme } from '../hooks/useTheme'
+import { Sun, Moon } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
 
 export function Navbar({ pageTitle }: { pageTitle?: string }) {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
+  const { theme, toggle: toggleTheme } = useTheme()
 
   return (
     <nav style={{
@@ -53,7 +57,7 @@ export function Navbar({ pageTitle }: { pageTitle?: string }) {
               style={{
                 background: 'transparent',
                 border: 'none',
-                color: '#A1A1AA',
+                color: 'var(--text-secondary)',
                 fontSize: '11px',
                 fontWeight: 700,
                 textTransform: 'uppercase',
@@ -63,6 +67,35 @@ export function Navbar({ pageTitle }: { pageTitle?: string }) {
               }}
             >
               Dashboard
+            </button>
+
+            <button
+              onClick={toggleTheme}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'var(--text-muted)',
+                cursor: 'pointer',
+                padding: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: '8px',
+                transition: 'all 0.2s',
+              }}
+              className="nav-btn-hover"
+            >
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={theme}
+                  initial={{ opacity: 0, rotate: -90, scale: 0.5 }}
+                  animate={{ opacity: 1, rotate: 0, scale: 1 }}
+                  exit={{ opacity: 0, rotate: 90, scale: 0.5 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  {theme === 'dark' ? <Moon size={18} /> : <Sun size={18} />}
+                </motion.div>
+              </AnimatePresence>
             </button>
             <button
               onClick={logout}
@@ -146,6 +179,12 @@ export function Navbar({ pageTitle }: { pageTitle?: string }) {
           </>
         )}
       </div>
+      <style>{`
+        .nav-btn-hover:hover {
+          color: var(--accent) !important;
+          background: var(--accent-soft) !important;
+        }
+      `}</style>
     </nav>
   )
 }

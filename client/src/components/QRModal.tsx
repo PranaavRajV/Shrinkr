@@ -1,7 +1,7 @@
-import { useRef, useState } from 'react'
+import { useRef, useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { QRCodeCanvas } from 'qrcode.react'
-import { Download, Copy, X, Check, ExternalLink } from 'lucide-react'
+import { Download, Copy, X, Check, ExternalLink, Printer } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 type QRModalProps = {
@@ -10,6 +10,12 @@ type QRModalProps = {
 }
 
 export default function QRModal({ shortUrl, onClose }: QRModalProps) {
+  useEffect(() => {
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', esc)
+    return () => window.removeEventListener('keydown', esc)
+  }, [onClose])
+
   const qrRef = useRef<HTMLCanvasElement>(null)
   const [downloading, setDownloading] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -93,6 +99,55 @@ export default function QRModal({ shortUrl, onClose }: QRModalProps) {
     } catch {
       toast.error('COPY FAILED')
     }
+  }
+
+  const handlePrint = () => {
+    const printWindow = window.open('', '_blank')
+    if (!printWindow) { toast.error('Popup blocked — please allow to print'); return }
+
+    const qrSrc = qrRef.current?.toDataURL('image/png')
+    
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Print QR Code - ${code}</title>
+          <style>
+            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+            body { 
+              font-family: 'Inter', sans-serif; 
+              display: flex; 
+              flex-direction: column; 
+              align-items: center; 
+              justify-content: center; 
+              height: 100vh; 
+              margin: 0; 
+              color: #000;
+              text-align: center;
+            }
+            .container { padding: 40px; border: 2px solid #eee; border-radius: 20px; }
+            .qr-id { font-size: 32px; font-weight: 900; margin-bottom: 8px; }
+            .url { font-size: 14px; color: #666; margin-bottom: 32px; font-weight: 400; }
+            img { width: 300px; height: 300px; margin-bottom: 32px; }
+            .footer { font-size: 12px; font-weight: 800; color: #888; text-transform: uppercase; letter-spacing: 0.1em; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="qr-id">shrinkr.co/${code}</div>
+            <div class="url">${shortUrl}</div>
+            <img src="${qrSrc}" />
+            <div class="footer">Created with Shrinkr</div>
+          </div>
+          <script>
+            window.onload = () => {
+              window.print();
+              setTimeout(() => window.close(), 500);
+            }
+          </script>
+        </body>
+      </html>
+    `)
+    printWindow.document.close()
   }
 
   return (
@@ -214,23 +269,41 @@ export default function QRModal({ shortUrl, onClose }: QRModalProps) {
             {downloading ? 'GENERATING...' : 'DOWNLOAD PNG'}
           </button>
 
-          <button
-            onClick={copyLink}
-            style={{
-              height: '52px', width: '100%',
-              background: copied ? 'rgba(203,255,0,0.1)' : '#1a1a1a',
-              border: `1px solid ${copied ? 'rgba(203,255,0,0.3)' : '#222'}`,
-              color: copied ? '#CBFF00' : '#aaa',
-              fontWeight: 800, fontSize: '13px', textTransform: 'uppercase',
-              cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
-              borderRadius: '12px',
-              transition: 'all 0.2s',
-            }}
-          >
-            {copied ? <Check size={17} /> : <Copy size={17} />}
-            {copied ? 'COPIED!' : 'COPY LINK'}
-          </button>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+            <button
+              onClick={handlePrint}
+              style={{
+                height: '52px',
+                background: '#1a1a1a',
+                border: '1px solid #222',
+                color: '#aaa',
+                fontWeight: 800, fontSize: '13px', textTransform: 'uppercase',
+                cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                borderRadius: '12px',
+                transition: 'all 0.2s',
+              }}
+            >
+              <Printer size={16} /> PRINT
+            </button>
+            <button
+              onClick={copyLink}
+              style={{
+                height: '52px',
+                background: copied ? 'rgba(203,255,0,0.1)' : '#1a1a1a',
+                border: `1px solid ${copied ? 'rgba(203,255,0,0.3)' : '#222'}`,
+                color: copied ? '#CBFF00' : '#aaa',
+                fontWeight: 800, fontSize: '13px', textTransform: 'uppercase',
+                cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                borderRadius: '12px',
+                transition: 'all 0.2s',
+              }}
+            >
+              {copied ? <Check size={16} /> : <Copy size={16} />}
+              {copied ? 'COPIED!' : 'COPY'}
+            </button>
+          </div>
         </div>
       </motion.div>
     </div>

@@ -1,9 +1,10 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import api from '../lib/api'
 import toast from 'react-hot-toast'
 import Layout from '../components/Layout'
-import { User, Shield, Key, Camera, Mail, Info, Save } from 'lucide-react'
+import { User, Shield, Key, Camera, Mail, Info, Save, ShieldCheck, QrCode, Laptop, Copy, AlertCircle, CheckCircle2 } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
 
 const S = {
   card: {
@@ -45,6 +46,7 @@ export default function Profile() {
   const [currentPw, setCurrentPw] = useState('')
   const [newPw, setNewPw] = useState('')
   const [changingPw, setChangingPw] = useState(false)
+  const [twoFactorAction, setTwoFactorAction] = useState<'setup' | 'disable' | null>(null)
 
   // Sync with context if user changes (e.g. after background load or successful update)
   useEffect(() => {
@@ -238,10 +240,201 @@ export default function Profile() {
                     </button>
                  </form>
               </div>
+
+              <div style={{ ...S.card, marginBottom: 0 }}>
+                 <h3 style={{ fontSize: '20px', fontWeight: 900, marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '14px', color: '#fff' }}>
+                    <ShieldCheck size={22} color="var(--accent)" />
+                    Two-Factor Authentication
+                 </h3>
+                 <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginBottom: '32px' }}>
+                   Add an extra layer of security to your account by requiring a verification code from your mobile device.
+                 </p>
+                 
+                 {user.twoFactorEnabled ? (
+                   <div style={{ background: 'rgba(203,255,0,0.05)', border: '1px solid var(--accent)', padding: '24px', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                     <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                       <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <CheckCircle2 color="#000" size={24} />
+                       </div>
+                       <div>
+                          <div style={{ fontSize: '15px', fontWeight: 900, color: '#fff' }}>2FA IS ENABLED</div>
+                          <div style={{ fontSize: '12px', color: 'var(--accent)', fontWeight: 800 }}>SECURE ACCESS ACTIVE</div>
+                       </div>
+                     </div>
+                     <button 
+                        onClick={() => setTwoFactorAction('disable')}
+                        style={{ background: 'transparent', border: '1px solid rgba(255,68,68,0.3)', color: '#ff4444', padding: '10px 20px', borderRadius: '12px', fontSize: '11px', fontWeight: 900, cursor: 'pointer' }}
+                     >
+                        DISABLE 2FA
+                     </button>
+                   </div>
+                 ) : (
+                   <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', padding: '24px', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                         <AlertCircle color="#ffcc00" size={32} />
+                         <div>
+                            <div style={{ fontSize: '15px', fontWeight: 900, color: '#fff' }}>2FA IS DISABLED</div>
+                            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>YOUR ACCOUNT IS AT RISK</div>
+                         </div>
+                      </div>
+                      <button 
+                         onClick={() => setTwoFactorAction('setup')}
+                         style={{ ...S.btnPrimary, width: 'fit-content' }}
+                      >
+                         ENABLE MFA
+                      </button>
+                   </div>
+                 )}
+              </div>
            </div>
         </div>
       </div>
+      <TwoFactorModal action={twoFactorAction} onClose={() => { setTwoFactorAction(null); refreshProfile(); }} />
     </Layout>
   )
 }
 
+function TwoFactorModal({ action, onClose }: { action: 'setup' | 'disable' | null, onClose: () => void }) {
+  const [step, setStep] = useState(1);
+  const [setupData, setSetupData] = useState<any>(null);
+  const [token, setToken] = useState('');
+  const [backupCodes, setBackupCodes] = useState<string[]>([]);
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (action === 'setup') {
+       setStep(1);
+       setToken('');
+       startSetup();
+    }
+  }, [action]);
+
+  const startSetup = async () => {
+    try {
+      const res = await api.post('/api/auth/2fa/setup');
+      setSetupData(res.data.data);
+    } catch (err) {
+      toast.error('Failed to start setup');
+      onClose();
+    }
+  };
+
+  const handleVerify = async () => {
+    setLoading(true);
+    try {
+      const res = await api.post('/api/auth/2fa/verify-setup', { token });
+      setBackupCodes(res.data.data.backupCodes);
+      setStep(3);
+      toast.success('MFA ENABLED ✓');
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'INVALID CODE');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDisable = async () => {
+    setLoading(true);
+    try {
+      await api.post('/api/auth/2fa/disable', { token, password });
+      toast.success('2FA DISABLED');
+      onClose();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'DEACTIVATION FAILED');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!action) return null;
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.9)', backdropFilter: 'blur(10px)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
+       <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} style={{ background: '#0a0a0a', border: '1px solid #222', padding: '48px', borderRadius: '32px', maxWidth: '480px', width: '100%', textAlign: 'center' }}>
+          
+          <AnimatePresence mode="wait">
+             {action === 'setup' ? (
+                <div key="setup">
+                   {step === 1 && (
+                      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                         <div style={{ width: 64, height: 64, background: 'rgba(203,255,0,0.1)', borderRadius: '16px', margin: '0 auto 24px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)' }}>
+                            <QrCode size={32} />
+                         </div>
+                         <h2 style={{ fontSize: '24px', fontWeight: 900, marginBottom: '12px', color: '#fff' }}>SCAN QR CODE</h2>
+                         <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginBottom: '32px', lineHeight: 1.6 }}>Scan the image below with Google Authenticator or Authy to begin setup.</p>
+                         
+                         {setupData ? (
+                            <img src={setupData.qrCode} style={{ width: '200px', height: '200px', borderRadius: '12px', border: '8px solid #fff', margin: '0 auto 24px' }} alt="QR" />
+                         ) : <div style={{ height: '200px' }} />}
+                         
+                         <button style={{ ...S.btnPrimary, margin: '0 auto' }} onClick={() => setStep(2)}>NEXT STEP</button>
+                      </motion.div>
+                   )}
+                   {step === 2 && (
+                      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                         <div style={{ width: 64, height: 64, background: 'rgba(203,255,0,0.1)', borderRadius: '16px', margin: '0 auto 24px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)' }}>
+                            <ShieldCheck size={32} />
+                         </div>
+                         <h2 style={{ fontSize: '24px', fontWeight: 900, marginBottom: '12px', color: '#fff' }}>VERIFY DEVICE</h2>
+                         <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginBottom: '32px' }}>Enter the 6-digit code from your app.</p>
+                         
+                         <input 
+                            value={token} 
+                            onChange={e => setToken(e.target.value.replace(/[^0-9]/g, '').slice(0,6))}
+                            placeholder="000000"
+                            style={{ background: '#111', border: '1px solid #222', borderRadius: '12px', padding: '16px', color: '#fff', fontSize: '24px', fontWeight: 900, textAlign: 'center', letterSpacing: '0.4em', width: '100%', marginBottom: '24px', outline: 'none' }}
+                         />
+                         
+                         <button style={{ ...S.btnPrimary, margin: '0 auto' }} disabled={token.length !== 6 || loading} onClick={handleVerify}>
+                            {loading ? 'VERIFYING...' : 'FINALIZE SETUP'}
+                         </button>
+                      </motion.div>
+                   )}
+                   {step === 3 && (
+                      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                         <div style={{ width: 64, height: 64, background: 'rgba(203,255,0,0.1)', borderRadius: '16px', margin: '0 auto 24px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)' }}>
+                            <Key size={32} />
+                         </div>
+                         <h2 style={{ fontSize: '24px', fontWeight: 900, marginBottom: '12px', color: '#fff' }}>BACKUP CODES</h2>
+                         <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginBottom: '32px' }}>Save these codes! You'll need them if you lose your phone.</p>
+                         
+                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', background: '#000', padding: '16px', borderRadius: '12px', border: '1px solid #222', marginBottom: '32px' }}>
+                            {backupCodes.map(code => (
+                               <div key={code} style={{ fontFamily: 'monospace', color: 'var(--accent)', fontSize: '12px', fontWeight: 800 }}>{code}</div>
+                            ))}
+                         </div>
+                         
+                         <button style={{ ...S.btnPrimary, margin: '0 auto' }} onClick={onClose}>I'VE SAVED THEM</button>
+                      </motion.div>
+                   )}
+                </div>
+             ) : (
+                <div key="disable">
+                   <div style={{ width: 64, height: 64, background: 'rgba(255,68,68,0.1)', borderRadius: '16px', margin: '0 auto 24px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ff4444' }}>
+                      <AlertCircle size={32} />
+                   </div>
+                   <h2 style={{ fontSize: '24px', fontWeight: 900, marginBottom: '12px', color: '#fff' }}>DISABLE MFA?</h2>
+                   <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginBottom: '32px' }}>Enter your password and 2FA code to confirm.</p>
+                   
+                   <div style={{ textAlign: 'left', marginBottom: '24px' }}>
+                      <label style={{ fontSize: '10px', fontWeight: 900, color: '#555', marginBottom: '8px', display: 'block' }}>ACCOUNT PASSWORD</label>
+                      <input type="password" value={password} onChange={e => setPassword(e.target.value)} style={{ background: '#111', border: '1px solid #222', borderRadius: '12px', padding: '14px', color: '#fff', fontSize: '14px', width: '100%', marginBottom: '16px', outline: 'none' }} />
+                      
+                      <label style={{ fontSize: '10px', fontWeight: 900, color: '#555', marginBottom: '8px', display: 'block' }}>APP CODE</label>
+                      <input value={token} onChange={e => setToken(e.target.value)} placeholder="000000" style={{ background: '#111', border: '1px solid #222', borderRadius: '12px', padding: '14px', color: '#fff', fontSize: '14px', width: '100%', outline: 'none' }} />
+                   </div>
+                   
+                   <div style={{ display: 'flex', gap: '12px' }}>
+                      <button onClick={onClose} style={{ flex: 1, background: 'transparent', border: '1px solid #222', color: '#555', borderRadius: '12px', fontWeight: 800, cursor: 'pointer', height: '48px' }}>CANCEL</button>
+                      <button onClick={handleDisable} disabled={loading} style={{ flex: 1, background: '#ff4444', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: 800, cursor: 'pointer', height: '48px' }}>
+                         {loading ? 'DISABLING...' : 'CONFIRM'}
+                      </button>
+                   </div>
+                </div>
+             )}
+          </AnimatePresence>
+       </motion.div>
+    </div>
+  );
+}

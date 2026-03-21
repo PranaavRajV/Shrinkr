@@ -11,6 +11,9 @@ export default function Login() {
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [showPw, setShowPw] = useState(false)
+  const [requires2FA, setRequires2FA] = useState(false)
+  const [tempToken, setTempToken] = useState('')
+  const [twoFactorToken, setTwoFactorToken] = useState('')
   const { login, googleLogin } = useAuth()
   const navigate = useNavigate()
 
@@ -18,15 +21,29 @@ export default function Login() {
     e.preventDefault()
     setLoading(true)
     try {
-      await login(email, password)
-      toast.success('WELCOME BACK')
-      navigate('/dashboard')
+      if (requires2FA) {
+        await verify2FA(tempToken, twoFactorToken)
+        toast.success('WELCOME BACK')
+        navigate('/dashboard')
+        return
+      }
+      const data = await login(email, password)
+      if (data?.requiresTwoFactor) {
+        setRequires2FA(true)
+        setTempToken(data.tempToken)
+        toast.success('PLEASE ENTER MFA CODE')
+      } else {
+        toast.success('WELCOME BACK')
+        navigate('/dashboard')
+      }
     } catch (err: any) {
-      toast.error(err.response?.data?.error || 'LOGIN FAILED')
+      toast.error(err.response?.data?.message || err.response?.data?.error || 'LOGIN FAILED')
     } finally {
       setLoading(false)
     }
   }
+
+  const { verify2FA } = useAuth()
 
   return (
     <div style={{
@@ -104,43 +121,76 @@ export default function Login() {
           </div>
 
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-            <div>
-               <label style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px', display: 'block' }}>
-                 Account Email
-               </label>
-               <input 
-                 type="email" placeholder="name@company.com" required value={email} onChange={e => setEmail(e.target.value)}
-                 style={{ 
-                   width: '100%', background: 'var(--bg-secondary)', border: '1px solid var(--border)',
-                   padding: '16px 20px', borderRadius: 'var(--radius-md)', color: '#fff', fontSize: '15px'
-                 }} 
-               />
-            </div>
-
-            <div>
-               <label style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px', display: 'block' }}>
-                 Security Password
-               </label>
-               <div style={{ position: 'relative' }}>
+            {!requires2FA ? (
+              <>
+                <div>
+                  <label style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px', display: 'block' }}>
+                    Account Email
+                  </label>
                   <input 
-                    type={showPw ? 'text' : 'password'} placeholder="••••••••" required value={password} onChange={e => setPassword(e.target.value)}
+                    type="email" placeholder="name@company.com" required value={email} onChange={e => setEmail(e.target.value)}
                     style={{ 
                       width: '100%', background: 'var(--bg-secondary)', border: '1px solid var(--border)',
-                      padding: '16px 20px', paddingRight: '50px', borderRadius: 'var(--radius-md)', color: '#fff', fontSize: '15px'
+                      padding: '16px 20px', borderRadius: 'var(--radius-md)', color: '#fff', fontSize: '15px'
                     }} 
                   />
-                  <button 
-                    type="button" onClick={() => setShowPw(!showPw)}
-                    style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}
-                  >
-                    {showPw ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
-               </div>
-            </div>
+                </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '-8px' }}>
-               <Link to="/forgot" style={{ fontSize: '12px', color: 'var(--text-muted)', textDecoration: 'none', fontWeight: 600 }}>Forgot Password?</Link>
-            </div>
+                <div>
+                  <label style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px', display: 'block' }}>
+                    Security Password
+                  </label>
+                  <div style={{ position: 'relative' }}>
+                      <input 
+                        type={showPw ? 'text' : 'password'} placeholder="••••••••" required value={password} onChange={e => setPassword(e.target.value)}
+                        style={{ 
+                          width: '100%', background: 'var(--bg-secondary)', border: '1px solid var(--border)',
+                          padding: '16px 20px', paddingRight: '50px', borderRadius: 'var(--radius-md)', color: '#fff', fontSize: '15px'
+                        }} 
+                      />
+                      <button 
+                        type="button" onClick={() => setShowPw(!showPw)}
+                        style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}
+                      >
+                        {showPw ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '-8px' }}>
+                  <Link to="/forgot" style={{ fontSize: '12px', color: 'var(--text-muted)', textDecoration: 'none', fontWeight: 600 }}>Forgot Password?</Link>
+                </div>
+              </>
+            ) : (
+              <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
+                 <label style={{ fontSize: '11px', fontWeight: 800, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px', display: 'block' }}>
+                    2FA Verification Code
+                 </label>
+                 <input 
+                    type="text" 
+                    placeholder="000000" 
+                    required 
+                    value={twoFactorToken} 
+                    onChange={e => setTwoFactorToken(e.target.value)}
+                    autoFocus
+                    style={{ 
+                       width: '100%', background: 'var(--bg-secondary)', border: '1px solid var(--accent)',
+                       padding: '16px 20px', borderRadius: 'var(--radius-md)', color: '#fff', fontSize: '24px',
+                       fontWeight: 900, textAlign: 'center', letterSpacing: '0.5em'
+                    }} 
+                 />
+                 <p style={{ color: 'var(--text-muted)', fontSize: '12px', marginTop: '16px', textAlign: 'center' }}>
+                    Enter the 6-digit code or a backup code.
+                 </p>
+                 <button 
+                   type="button" 
+                   onClick={() => setRequires2FA(false)}
+                   style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '11px', fontWeight: 800, cursor: 'pointer', width: '100%', marginTop: '16px' }}
+                 >
+                    ← BACK TO LOGIN
+                 </button>
+              </motion.div>
+            )}
 
             <button 
               type="submit" disabled={loading}
@@ -151,7 +201,7 @@ export default function Login() {
                 gap: '12px', boxShadow: '0 10px 30px rgba(203, 255, 0, 0.2)', marginTop: '10px'
               }}
             >
-              {loading ? 'Authenticating...' : <><LogIn size={20} /> Access Vault</>}
+              {loading ? 'Authenticating...' : requires2FA ? 'Verify Identity' : <><LogIn size={20} /> Access Vault</>}
             </button>
           </form>
 
@@ -168,11 +218,17 @@ export default function Login() {
                  if (credentialResponse.credential) {
                     setLoading(true)
                     try {
-                      await googleLogin(credentialResponse.credential)
-                      toast.success('SIGNED IN WITH GOOGLE')
-                      navigate('/dashboard')
+                      const data = await googleLogin(credentialResponse.credential)
+                      if (data?.requiresTwoFactor) {
+                        setRequires2FA(true)
+                        setTempToken(data.tempToken)
+                        toast.success('PLEASE ENTER MFA CODE')
+                      } else {
+                        toast.success('SIGNED IN WITH GOOGLE')
+                        navigate('/dashboard')
+                      }
                     } catch (err: any) {
-                      toast.error(err.response?.data?.error || 'GOOGLE SSO FAILED')
+                      toast.error(err.response?.data?.message || err.response?.data?.error || 'GOOGLE SSO FAILED')
                     } finally {
                       setLoading(false)
                     }

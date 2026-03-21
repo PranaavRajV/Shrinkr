@@ -1,32 +1,41 @@
 import { useEffect, useState } from 'react'
 
-export function useCountUp(target: number, duration = 800, start = true) {
+export const useCountUp = (target: number, duration = 1200) => {
   const [count, setCount] = useState(0)
+  const prefersReduced = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
   useEffect(() => {
-    if (!start) return
-
-    let startTime: number | null = null
-    const end = target
-
-    function easeOutQuart(x: number): number {
-      return 1 - Math.pow(1 - x, 4)
+    if (prefersReduced) {
+      setCount(target)
+      return
     }
 
-    function step(timestamp: number) {
-      if (!startTime) startTime = timestamp
-      const progress = Math.min((timestamp - startTime) / duration, 1)
-      const easedProgress = easeOutQuart(progress)
-      
-      setCount(Math.floor(easedProgress * end))
+    if (target === 0) {
+      setCount(0)
+      return
+    }
 
-      if (progress < 1) {
-        requestAnimationFrame(step)
+    let start = 0
+    let startTime: number | null = null
+
+    const animate = (timestamp: number) => {
+      if (!startTime) startTime = timestamp
+      const progress = timestamp - startTime
+      const easeOutQuad = (t: number) => t * (2 - t)
+      const percentage = Math.min(progress / duration, 1)
+      const current = Math.floor(target * easeOutQuad(percentage))
+      
+      setCount(current)
+
+      if (percentage < 1) {
+        requestAnimationFrame(animate)
+      } else {
+        setCount(target)
       }
     }
 
-    requestAnimationFrame(step)
-  }, [target, duration, start])
+    requestAnimationFrame(animate)
+  }, [target, duration, prefersReduced])
 
   return count
 }

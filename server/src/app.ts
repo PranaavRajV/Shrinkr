@@ -14,12 +14,20 @@ import { parseUserAgent } from './utils/deviceParser'
 import { fail } from './utils/response'
 import { renderErrorPage } from './utils/errorPage'
 import { renderPasswordPage } from './utils/passwordPage'
+import { detectBot } from './utils/botDetector'
+import { fireWebhook } from './utils/webhook'
 
 import authRoutes from './routes/auth'
 import urlRoutes from './routes/urls'
 import analyticsRoutes from './routes/analytics'
 import userRoutes from './routes/users'
 import statsRouter from './routes/stats'
+import bioRoutes from './routes/bio'
+import apiKeyRoutes from './routes/apikeys'
+import twoFactorRoutes from './routes/twoFactor'
+import docsRoutes from './routes/docs'
+import aiRoutes from './routes/ai'
+import { parseReferrer } from './utils/referrerParser'
 
 const app = express()
 
@@ -58,6 +66,11 @@ app.use('/api/urls', urlRoutes)
 app.use('/api/analytics', analyticsRoutes)
 app.use('/api/users', userRoutes)
 app.use('/api/stats', statsRouter)
+app.use('/api/bio', bioRoutes)
+app.use('/api/apikeys', apiKeyRoutes)
+app.use('/api/auth/2fa', twoFactorRoutes)
+app.use('/api/docs', docsRoutes)
+app.use('/api/ai', aiRoutes)
 
 // 4. Root & Health
 app.get('/health', (_req, res) => res.json({ success: true, message: 'Shrinkr API Running' }))
@@ -119,8 +132,36 @@ app.get('/:shortCode', async (req, res, next) => {
       return res.status(410).send(renderErrorPage(410, 'This link has expired and is no longer available', 'URL_EXPIRED'))
     }
 
-    // 4. Populate Cache (fire-and-forget) - ONLY IF NO PASSWORD
-    if (!url.linkPassword) {
+    // ─── NEW: Targeting Check ──────────────────────────────────────────────────
+    if (url.targeting) {
+      const userAgent = req.headers['user-agent'] || ''
+      const { device } = parseUserAgent(userAgent)
+      
+      // 1. Device Targeting
+      if (device === 'mobile' && url.targeting.mobile) {
+        updateAnalytics(shortCode, req, url._id.toString())
+        return res.redirect(302, url.targeting.mobile)
+      }
+      if (device === 'tablet' && url.targeting.tablet) {
+        updateAnalytics(shortCode, req, url._id.toString())
+        return res.redirect(302, url.targeting.tablet)
+      }
+
+      // 2. Country Targeting
+      const ip = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.ip || ''
+      const countryCode = ipToCountry(ip)
+      if (countryCode && url.targeting.countries && url.targeting.countries.length > 0) {
+        const countryTarget = url.targeting.countries.find((c: any) => c.code.toUpperCase() === countryCode.toUpperCase())
+        if (countryTarget) {
+          updateAnalytics(shortCode, req, url._id.toString())
+          return res.redirect(302, countryTarget.url)
+        }
+      }
+    }
+    // ──────────────────────────────────────────────────────────────────────────
+
+    // 4. Populate Cache (fire-and-forget) - ONLY IF NO PASSWORD AND NO TARGETING
+    if (!url.linkPassword && !url.targeting) {
       getRedisClient().then(redis => {
         redis.set(`url:${shortCode}`, url.originalUrl, 'EX', 86400)
       }).catch(() => {})
@@ -135,6 +176,8 @@ app.get('/:shortCode', async (req, res, next) => {
   }
 })
 
+import { ipToCountry } from './utils/geoip'
+
 // Analytics Tracker (Non-blocking)
 function updateAnalytics(shortCode: string, req: express.Request, urlId?: string) {
   setImmediate(async () => {
@@ -143,22 +186,81 @@ function updateAnalytics(shortCode: string, req: express.Request, urlId?: string
         $or: [{ shortCode }, { customAlias: shortCode }] 
       }).select('_id'))?._id.toString()
       
+      
       if (!actualUrlId) return
 
-      await Url.findByIdAndUpdate(actualUrlId, { $inc: { totalClicks: 1 } })
-      
       const userAgent = req.headers['user-agent'] || ''
+      const ip = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.ip || ''
+      const referrer = req.headers['referer'] || ''
+      
+      const botResult = detectBot(userAgent, ip, referrer)
+      
+      // USER SAID: totalClicks: (count of ALL clicks including bots)
+      const inc: any = { totalClicks: 1 }
+      if (!botResult.isBot) inc.realClicks = 1
+      
+      const updatedUrl = await Url.findByIdAndUpdate(actualUrlId, { 
+        $inc: inc,
+        $set: { lastClickAt: new Date() }
+      }, { new: true })
+      
+      if (
+        updatedUrl &&
+        updatedUrl.clickGoal &&
+        !updatedUrl.goalReachedAt &&
+        updatedUrl.totalClicks >= updatedUrl.clickGoal
+      ) {
+        await Url.findByIdAndUpdate(actualUrlId, {
+          goalReachedAt: new Date()
+        })
+      }
+
       const { device, browser } = parseUserAgent(userAgent)
+      const country = ipToCountry(ip) || 'Unknown'
+      const ref = parseReferrer(referrer)
       
       await Click.create({
         urlId: actualUrlId,
         timestamp: new Date(),
-        ip: (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.ip,
+        ip,
         userAgent,
+        country,
         device,
         browser,
-        referrer: req.headers['referer'] || ''
+        referrer,
+        referrerSource: ref.source,
+        referrerMedium: ref.medium,
+        isBot: botResult.isBot,
+        botReason: botResult.reason
       })
+
+      // FIRE WEBHOOK (Feature 1 Tier 2)
+      const urlData = updatedUrl
+      if (urlData?.webhookUrl) {
+        try {
+          await fireWebhook(
+            urlData.webhookUrl,
+            urlData.webhookSecret,
+            {
+              event: 'click',
+              shortCode: urlData.shortCode,
+              shortUrl: `${process.env.BASE_URL}/${urlData.shortCode}`,
+              originalUrl: urlData.originalUrl,
+              timestamp: new Date().toISOString(),
+              click: {
+                country: country || 'Unknown',
+                device,
+                browser,
+                referrer: referrer || '',
+                ip,
+                userAgent,
+              }
+            }
+          )
+        } catch (webhookErr) {
+          console.error('Webhook trigger failed:', webhookErr)
+        }
+      }
     } catch (e) {
       console.error('Analytics failed:', e)
     }

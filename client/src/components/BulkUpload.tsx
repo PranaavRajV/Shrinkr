@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Upload, Check, AlertCircle, X, Copy, ArrowLeft, Download, List, FileText } from 'lucide-react'
 import toast from 'react-hot-toast'
 import api from '../lib/api'
+import Papa from 'papaparse'
 
 type BulkUploadProps = {
   onClose: () => void
@@ -19,27 +20,27 @@ export default function BulkUpload({ onClose, onSuccess }: BulkUploadProps) {
   const [isDragging, setIsDragging] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const parseCSVText = (text: string) => {
-    const lines = text.split('\n').filter(l => l.trim())
-    // skip header row if it starts with "originalUrl" or "url"
-    const dataLines = lines[0]?.toLowerCase().startsWith('original') ? lines.slice(1) : lines
-    return dataLines.map(line => {
-      const parts = line.split(/[,\t]/)
-      const url = parts[0]?.trim() || ''
-      const alias = parts[1]?.trim() || ''
-      return { originalUrl: url, customAlias: alias, isValid: url.startsWith('http') }
-    }).filter(u => u.originalUrl)
+  const processData = (data: any[]) => {
+    const parsed = data.map(row => {
+      const url = (row.originalUrl || row.url || row[0] || '').trim()
+      const alias = (row.customAlias || row.alias || row[1] || '').trim()
+      let isValid = false
+      try { new URL(url); isValid = true } catch {}
+      return { originalUrl: url, customAlias: alias, isValid }
+    }).filter(u => u.originalUrl && u.originalUrl !== 'originalUrl')
+    
+    if (parsed.length === 0) { toast.error('No valid URLs found'); return }
+    setUrls(parsed)
+    setStep(2)
   }
 
   const handleFile = (file: File) => {
-    const reader = new FileReader()
-    reader.onload = e => {
-      const parsed = parseCSVText(e.target?.result as string)
-      if (parsed.length === 0) { toast.error('No valid URLs found in file'); return }
-      setUrls(parsed)
-      setStep(2)
-    }
-    reader.readAsText(file)
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: (results) => processData(results.data),
+      error: () => toast.error('CSV Parsing failed')
+    })
   }
 
   const handleDrop = useCallback((e: React.DragEvent) => {
@@ -50,10 +51,8 @@ export default function BulkUpload({ onClose, onSuccess }: BulkUploadProps) {
   }, [])
 
   const handleManualParse = () => {
-    const parsed = parseCSVText(manualText)
-    if (parsed.length === 0) { toast.error('No valid URLs found. Format: https://url.com, alias'); return }
-    setUrls(parsed)
-    setStep(2)
+    const results = Papa.parse(manualText, { header: false, skipEmptyLines: true })
+    processData(results.data)
   }
 
   const handleBulkShorten = async () => {
@@ -90,321 +89,177 @@ export default function BulkUpload({ onClose, onSuccess }: BulkUploadProps) {
 
   return (
     <div style={{
-      position: 'fixed', inset: 0, zIndex: 1000,
+      position: 'fixed', inset: 0, zIndex: 1100,
       background: 'rgba(0,0,0,0.85)',
-      backdropFilter: 'blur(16px)',
+      backdropFilter: 'blur(32px)',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       padding: '24px'
     }} onClick={onClose}>
       <motion.div
-        initial={{ y: 24, opacity: 0, scale: 0.97 }}
+        initial={{ y: 24, opacity: 0, scale: 0.95 }}
         animate={{ y: 0, opacity: 1, scale: 1 }}
         exit={{ y: 24, opacity: 0 }}
-        transition={{ type: 'spring', stiffness: 320, damping: 28 }}
         onClick={e => e.stopPropagation()}
         style={{
           background: '#111',
-          borderRadius: '20px',
-          width: '100%', maxWidth: '600px',
-          padding: '40px',
+          borderRadius: '32px',
+          width: '100%', maxWidth: '640px',
+          padding: '56px',
           position: 'relative',
-          boxShadow: '0 40px 80px rgba(0,0,0,0.8)',
-          border: '1px solid #222',
+          boxShadow: '0 40px 120px rgba(0,0,0,1)',
+          border: '1px solid #1a1a1a',
         }}
       >
-        {/* Close */}
         <button
           onClick={onClose}
           style={{
-            position: 'absolute', top: '20px', right: '20px',
-            background: 'none', border: '1px solid #222',
-            borderRadius: '8px', padding: '7px', cursor: 'pointer',
-            color: '#666', display: 'flex', transition: 'border-color 0.2s'
+            position: 'absolute', top: '24px', right: '24px',
+            background: 'none', border: '1px solid #1a1a1a',
+            borderRadius: '12px', padding: '10px', cursor: 'pointer',
+            color: '#555', display: 'flex'
           }}
         >
-          <X size={16} />
+          <X size={20} />
         </button>
 
-        {/* Header */}
-        <div style={{ marginBottom: '32px' }}>
-          <h2 style={{ fontSize: '28px', fontWeight: 900, letterSpacing: '-0.03em', color: '#fff', marginBottom: '6px' }}>
-            Bulk Import
+        <div style={{ marginBottom: '40px' }}>
+          <h2 style={{ fontSize: '36px', fontWeight: 900, letterSpacing: '-0.04em', color: '#fff', marginBottom: '8px' }}>
+            Bulk Shorten
           </h2>
-          <p style={{ fontSize: '13px', color: '#555', fontWeight: 500 }}>
-            Upload a CSV or paste URLs to shorten multiple links at once.
+          <p style={{ fontSize: '15px', color: 'var(--text-muted)' }}>
+            Process up to 50 links simultaneously via CSV or direct input.
           </p>
         </div>
 
-        {/* Step indicator */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0', marginBottom: '36px' }}>
+        {/* PROGRESS */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0', marginBottom: '48px' }}>
           {[1, 2, 3].map((s, idx) => (
             <div key={s} style={{ display: 'flex', alignItems: 'center' }}>
               <div style={{
-                width: '32px', height: '32px', borderRadius: '50%',
+                width: '40px', height: '40px', borderRadius: '50%',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '12px', fontWeight: 900,
-                background: step > s ? '#CBFF00' : step === s ? '#fff' : '#1a1a1a',
-                color: step > s ? '#000' : step === s ? '#000' : '#444',
-                border: step === s ? '2px solid #CBFF00' : '2px solid transparent',
-                transition: 'all 0.3s',
-                boxShadow: step === s ? '0 0 16px rgba(203,255,0,0.3)' : 'none'
-              }}>
-                {step > s ? <Check size={14} /> : s}
-              </div>
-              {idx < 2 && (
-                <div style={{
-                  width: '48px', height: '2px',
-                  background: step > s ? '#CBFF00' : '#1a1a1a',
-                  transition: 'background 0.3s'
-                }} />
-              )}
+                fontSize: '14px', fontWeight: 900,
+                background: step > s ? 'var(--accent)' : step === s ? '#fff' : '#0a0a0a',
+                color: '#000',
+                border: step === s ? '2px solid var(--accent)' : '2px solid transparent',
+              }}>{step > s ? <Check size={18} /> : s}</div>
+              {idx < 2 && <div style={{ width: '60px', height: '2px', background: step > s ? 'var(--accent)' : '#1a1a1a' }} />}
             </div>
           ))}
         </div>
 
         <AnimatePresence mode="wait">
-
-          {/* ── STEP 1: Input ─────────────────────────────────────────── */}
           {step === 1 && (
             <motion.div key="s1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-              {/* Tabs */}
-              <div style={{
-                display: 'flex', gap: '4px', background: '#0a0a0a', borderRadius: '10px',
-                padding: '4px', marginBottom: '24px', border: '1px solid #1a1a1a'
-              }}>
+              <div style={{ display: 'flex', gap: '8px', background: '#0a0a0a', borderRadius: '16px', padding: '6px', marginBottom: '32px', border: '1px solid #1a1a1a' }}>
                 {(['file', 'paste'] as const).map(m => (
-                  <button key={m} onClick={() => setMode(m)} style={{
-                    flex: 1, padding: '10px', fontSize: '11px', fontWeight: 800,
-                    textTransform: 'uppercase', letterSpacing: '0.1em',
-                    border: 'none', cursor: 'pointer', borderRadius: '8px',
-                    background: mode === m ? '#CBFF00' : 'transparent',
-                    color: mode === m ? '#000' : '#555',
-                    transition: 'all 0.2s',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
-                  }}>
-                    {m === 'file' ? <Upload size={13} /> : <List size={13} />}
-                    {m === 'file' ? 'CSV File' : 'Paste List'}
+                  <button key={m} onClick={() => setMode(m)} style={{ flex: 1, padding: '12px', fontSize: '12px', fontWeight: 900, border: 'none', cursor: 'pointer', borderRadius: '12px', background: mode === m ? 'var(--accent)' : 'transparent', color: mode === m ? '#000' : '#444', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                    {m === 'file' ? <Upload size={14} /> : <List size={14} />} {m === 'file' ? 'CSV FILE' : 'PASTE LIST'}
                   </button>
                 ))}
               </div>
 
               {mode === 'file' ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                   <input type="file" ref={fileInputRef} onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f) }} accept=".csv" style={{ display: 'none' }} />
                   <div
                     onClick={() => fileInputRef.current?.click()}
                     onDrop={handleDrop}
                     onDragOver={e => { e.preventDefault(); setIsDragging(true) }}
                     onDragLeave={() => setIsDragging(false)}
-                    style={{
-                      border: `2px dashed ${isDragging ? '#CBFF00' : '#222'}`,
-                      borderRadius: '12px', background: isDragging ? 'rgba(203,255,0,0.03)' : '#0a0a0a',
-                      padding: '60px 20px', cursor: 'pointer', textAlign: 'center',
-                      transition: 'all 0.2s'
-                    }}
+                    style={{ border: `2px dashed ${isDragging ? 'var(--accent)' : '#1a1a1a'}`, borderRadius: '24px', background: isDragging ? 'rgba(203,255,0,0.03)' : '#0a0a0a', padding: '80px 20px', cursor: 'pointer', textAlign: 'center' }}
                   >
-                    <div style={{
-                      width: '52px', height: '52px', background: isDragging ? 'rgba(203,255,0,0.15)' : '#1a1a1a',
-                      borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      margin: '0 auto 20px', transition: 'all 0.2s'
-                    }}>
-                      <FileText size={24} color={isDragging ? '#CBFF00' : '#555'} />
+                    <div style={{ width: '60px', height: '60px', background: '#111', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px', border: '1px solid #1a1a1a' }}>
+                      <FileText size={28} color={isDragging ? 'var(--accent)' : '#444'} />
                     </div>
-                    <div style={{ fontSize: '16px', fontWeight: 800, color: '#fff', marginBottom: '8px' }}>
-                      {isDragging ? 'Drop it!' : 'Drop CSV or click to browse'}
-                    </div>
-                    <div style={{ fontSize: '12px', color: '#444', fontWeight: 500 }}>
-                      Format: <span style={{ color: '#666', fontFamily: 'monospace' }}>originalUrl, customAlias</span>
-                    </div>
+                    <div style={{ fontSize: '18px', fontWeight: 900, color: '#fff', marginBottom: '8px' }}>{isDragging ? 'Release to drop' : 'Drop CSV or click to browse'}</div>
+                    <div style={{ fontSize: '13px', color: '#444' }}>Structure: <span style={{ color: '#666', fontFamily: 'monospace' }}>originalUrl, customAlias</span></div>
                   </div>
-
-                  <button onClick={downloadTemplate} style={{
-                    background: 'none', border: '1px solid #222', color: '#CBFF00',
-                    padding: '12px', borderRadius: '10px', fontSize: '12px', fontWeight: 800,
-                    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                    letterSpacing: '0.05em'
-                  }}>
-                    <Download size={14} /> DOWNLOAD CSV TEMPLATE
+                  <button onClick={downloadTemplate} style={{ background: 'none', border: '1px solid #1a1a1a', color: 'var(--accent)', padding: '16px', borderRadius: '16px', fontSize: '12px', fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                    <Download size={16} /> DOWNLOAD TEMPLATE
                   </button>
                 </div>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                   <textarea
                     value={manualText}
                     onChange={e => setManualText(e.target.value)}
-                    placeholder={'https://google.com, my-alias\nhttps://apple.com, mac-link\nhttps://github.com'}
-                    style={{
-                      width: '100%', height: '200px', background: '#0a0a0a',
-                      border: '1px solid #222', color: '#fff',
-                      padding: '16px', fontFamily: 'monospace', fontSize: '13px',
-                      outline: 'none', resize: 'none', borderRadius: '12px', lineHeight: 1.7,
-                      boxSizing: 'border-box'
-                    }}
+                    placeholder={'https://google.com, home-link\nhttps://github.com, git-repo\nhttps://twitter.com'}
+                    style={{ width: '100%', height: '240px', background: '#0a0a0a', border: '1px solid #1a1a1a', color: '#fff', padding: '24px', fontFamily: 'monospace', fontSize: '14px', outline: 'none', resize: 'none', borderRadius: '20px', lineHeight: 1.8, boxSizing: 'border-box' }}
                   />
-                  <div style={{ fontSize: '12px', color: '#444', fontWeight: 500 }}>
-                    One URL per line. Optional alias after a comma. Tab-separated also works.
-                  </div>
-                  <button
-                    onClick={handleManualParse}
-                    disabled={!manualText.trim()}
-                    style={{
-                      height: '52px', width: '100%',
-                      background: manualText.trim() ? '#CBFF00' : '#1a1a1a',
-                      color: manualText.trim() ? '#000' : '#333',
-                      fontWeight: 900, fontSize: '13px', textTransform: 'uppercase',
-                      border: 'none', cursor: manualText.trim() ? 'pointer' : 'not-allowed',
-                      letterSpacing: '0.08em', borderRadius: '10px',
-                      transition: 'all 0.2s'
-                    }}
-                  >
-                    PARSE {manualText.split('\n').filter(l => l.trim()).length} LINKS →
+                  <button onClick={handleManualParse} disabled={!manualText.trim()} style={{ height: '64px', width: '100%', background: manualText.trim() ? 'var(--accent)' : '#1a1a1a', color: manualText.trim() ? '#000' : '#333', fontWeight: 900, fontSize: '14px', border: 'none', cursor: manualText.trim() ? 'pointer' : 'not-allowed', borderRadius: '16px' }}>
+                    PROCESS {manualText.split('\n').filter(l => l.trim()).length} LINKS →
                   </button>
                 </div>
               )}
             </motion.div>
           )}
 
-          {/* ── STEP 2: Validation ──────────────────────────────────── */}
           {step === 2 && (
             <motion.div key="s2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                <h3 style={{ fontSize: '18px', fontWeight: 900, color: '#fff' }}>Pre-upload Validation</h3>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <span style={{ background: 'rgba(203,255,0,0.1)', color: '#CBFF00', padding: '4px 12px', borderRadius: '6px', fontSize: '11px', fontWeight: 800 }}>
-                    {validCount} VALID
-                  </span>
-                  {urls.length - validCount > 0 && (
-                    <span style={{ background: 'rgba(255,68,68,0.1)', color: '#ff4444', padding: '4px 12px', borderRadius: '6px', fontSize: '11px', fontWeight: 800 }}>
-                      {urls.length - validCount} INVALID
-                    </span>
-                  )}
-                </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                <h3 style={{ fontSize: '20px', fontWeight: 900, color: '#fff' }}>Preview</h3>
+                <div style={{ background: 'rgba(203,255,0,0.1)', color: 'var(--accent)', padding: '6px 14px', borderRadius: '8px', fontSize: '12px', fontWeight: 900 }}>{validCount} READY</div>
               </div>
-
-              <div style={{ border: '1px solid #1a1a1a', borderRadius: '10px', maxHeight: '220px', overflowY: 'auto', marginBottom: '24px', background: '#0a0a0a' }}>
+              <div style={{ border: '1px solid #1a1a1a', borderRadius: '16px', maxHeight: '280px', overflowY: 'auto', marginBottom: '32px', background: '#0a0a0a' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead style={{ position: 'sticky', top: 0, background: '#111' }}>
-                    <tr>
-                      {['ORIGINAL URL', 'ALIAS', 'STATUS'].map(h => (
-                        <th key={h} style={{ padding: '12px 16px', fontSize: '10px', fontWeight: 800, color: '#444', textAlign: 'left', textTransform: 'uppercase', letterSpacing: '0.08em', borderBottom: '1px solid #1a1a1a' }}>{h}</th>
-                      ))}
+                  <thead style={{ position: 'sticky', top: 0, background: '#111', zIndex: 1 }}>
+                    <tr style={{ textAlign: 'left', borderBottom: '1px solid #1a1a1a' }}>
+                      <th style={{ padding: '16px', fontSize: '11px', fontWeight: 900, color: '#444' }}>DESTINATION</th>
+                      <th style={{ padding: '16px', fontSize: '11px', fontWeight: 900, color: '#444' }}>ALIAS</th>
+                      <th style={{ padding: '16px', fontSize: '11px', fontWeight: 900, color: '#444' }}>STATUS</th>
                     </tr>
                   </thead>
                   <tbody>
                     {urls.map((u, i) => (
-                      <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
-                        <td style={{ padding: '11px 16px', fontSize: '12px', color: '#aaa', maxWidth: '220px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.originalUrl || '—'}</td>
-                        <td style={{ padding: '11px 16px', fontSize: '12px', color: '#666' }}>{u.customAlias || '—'}</td>
-                        <td style={{ padding: '11px 16px' }}>
-                          <span style={{
-                            fontSize: '10px', fontWeight: 800, borderRadius: '4px', padding: '3px 8px',
-                            background: u.isValid ? 'rgba(203,255,0,0.1)' : 'rgba(255,68,68,0.1)',
-                            color: u.isValid ? '#CBFF00' : '#ff4444',
-                          }}>
-                            {u.isValid ? 'READY' : 'INVALID'}
-                          </span>
+                      <tr key={i} style={{ borderBottom: '1px solid #111' }}>
+                        <td style={{ padding: '14px 16px', fontSize: '13px', color: '#888', maxWidth: '240px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.originalUrl}</td>
+                        <td style={{ padding: '14px 16px', fontSize: '13px', color: '#555' }}>{u.customAlias || '—'}</td>
+                        <td style={{ padding: '14px 16px' }}>
+                          <span style={{ fontSize: '10px', fontWeight: 900, padding: '4px 8px', borderRadius: '4px', background: u.isValid ? 'rgba(203,255,0,0.1)' : 'rgba(255,68,68,0.1)', color: u.isValid ? 'var(--accent)' : '#ff4444' }}>{u.isValid ? 'VALID' : 'INVALID'}</span>
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
-
-              <div style={{ display: 'flex', gap: '12px' }}>
-                <button onClick={() => setStep(1)} style={{
-                  height: '52px', padding: '0 20px', background: '#1a1a1a', border: '1px solid #222',
-                  borderRadius: '10px', color: '#666', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px',
-                  fontWeight: 800, fontSize: '12px'
-                }}>
-                  <ArrowLeft size={16} /> Back
-                </button>
-                <button
-                  onClick={handleBulkShorten}
-                  disabled={uploading || validCount === 0}
-                  style={{
-                    height: '52px', flex: 1,
-                    background: uploading || validCount === 0 ? '#1a1a1a' : '#CBFF00',
-                    color: uploading || validCount === 0 ? '#333' : '#000',
-                    fontWeight: 900, fontSize: '13px', textTransform: 'uppercase',
-                    border: 'none', cursor: uploading || validCount === 0 ? 'not-allowed' : 'pointer',
-                    letterSpacing: '0.08em', borderRadius: '10px', transition: 'all 0.2s'
-                  }}
-                >
-                  {uploading ? '⚡ Processing...' : `⚡ SHORTEN ${validCount} LINKS NOW`}
+              <div style={{ display: 'flex', gap: '16px' }}>
+                <button onClick={() => setStep(1)} style={{ height: '64px', padding: '0 32px', background: 'none', border: '1px solid #1a1a1a', borderRadius: '16px', color: '#555', cursor: 'pointer', fontWeight: 900, fontSize: '14px' }}>BACK</button>
+                <button onClick={handleBulkShorten} disabled={uploading || validCount === 0} style={{ height: '64px', flex: 1, background: (uploading || validCount === 0) ? '#1a1a1a' : 'var(--accent)', color: '#000', fontWeight: 900, fontSize: '14px', border: 'none', cursor: 'pointer', borderRadius: '16px' }}>
+                  {uploading ? 'PROCESSING...' : `⚡ SHORTEN ${validCount} LINKS`}
                 </button>
               </div>
             </motion.div>
           )}
 
-          {/* ── STEP 3: Results ─────────────────────────────────────── */}
           {step === 3 && (
             <motion.div key="s3" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
-              <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-                <div style={{
-                  width: '60px', height: '60px', background: 'rgba(203,255,0,0.1)',
-                  border: '1px solid rgba(203,255,0,0.3)', borderRadius: '50%',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px'
-                }}>
-                  <Check size={28} color="#CBFF00" />
-                </div>
-                <h3 style={{ fontSize: '24px', fontWeight: 900, color: '#fff', marginBottom: '8px' }}>Import Successful</h3>
-                <p style={{ color: '#555', fontSize: '14px' }}>
-                  <span style={{ color: '#CBFF00', fontWeight: 800 }}>{successCount}</span> of{' '}
-                  <span style={{ fontWeight: 800 }}>{results.length}</span> links were created.
-                </p>
+              <div style={{ textAlign: 'center', marginBottom: '40px' }}>
+                <div style={{ width: '80px', height: '80px', background: 'rgba(203,255,0,0.1)', border: '2px solid rgba(203,255,0,0.3)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}><Check size={40} color="var(--accent)" /></div>
+                <h3 style={{ fontSize: '32px', fontWeight: 900, color: '#fff', marginBottom: '8px' }}>Processing Complete</h3>
+                <p style={{ color: 'var(--text-muted)', fontSize: '16px' }}>Successfully processed <span style={{ color: 'var(--accent)', fontWeight: 900 }}>{successCount}</span> of {results.length} links.</p>
               </div>
-
-              <div style={{ border: '1px solid #1a1a1a', borderRadius: '10px', maxHeight: '200px', overflowY: 'auto', marginBottom: '24px', background: '#0a0a0a' }}>
+              <div style={{ border: '1px solid #1a1a1a', borderRadius: '16px', maxHeight: '240px', overflowY: 'auto', marginBottom: '40px', background: '#0a0a0a' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <tbody>
                     {results.map((r, i) => (
-                      <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
-                        <td style={{ padding: '12px 16px', width: '32px' }}>
-                          {r.success
-                            ? <Check size={14} color="#CBFF00" />
-                            : <AlertCircle size={14} color="#ff4444" />}
-                        </td>
-                        <td style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 700, color: r.success ? '#fff' : '#ff4444' }}>
-                          {r.success ? `/${r.shortCode}` : r.error}
-                        </td>
-                        <td style={{ padding: '12px 16px', textAlign: 'right' }}>
-                          {r.success && (
-                            <button
-                              onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/${r.shortCode}`); toast.success('COPIED!') }}
-                              style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
-                            >
-                              <Copy size={14} />
-                            </button>
-                          )}
-                        </td>
+                      <tr key={i} style={{ borderBottom: '1px solid #111' }}>
+                        <td style={{ padding: '16px', width: '40px' }}>{r.success ? <Check size={16} color="var(--accent)" /> : <AlertCircle size={16} color="#ff4444" />}</td>
+                        <td style={{ padding: '16px 8px', fontSize: '14px', fontWeight: 700, color: r.success ? '#fff' : '#ff4444' }}>{r.success ? `/${r.shortCode}` : r.error}</td>
+                        <td style={{ padding: '16px', textAlign: 'right' }}>{r.success && <button onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/${r.shortCode}`); toast.success('COPIED') }} style={{ background: 'none', border: 'none', color: '#444', cursor: 'pointer' }}><Copy size={16} /></button>}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
-
-              <div style={{ display: 'flex', gap: '12px' }}>
-                <button onClick={() => {
-                  const txt = results.filter(r => r.success).map(r => `${window.location.origin}/${r.shortCode}`).join('\n')
-                  navigator.clipboard.writeText(txt); toast.success('ALL LINKS COPIED')
-                }} style={{
-                  height: '52px', padding: '0 20px', background: '#1a1a1a', border: '1px solid #222',
-                  borderRadius: '10px', color: '#fff', cursor: 'pointer',
-                  fontWeight: 800, fontSize: '12px', display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap'
-                }}>
-                  <Copy size={14} /> COPY ALL
+              <div style={{ display: 'flex', gap: '16px' }}>
+                <button onClick={() => { const txt = results.filter(r => r.success).map(r => `${window.location.origin}/${r.shortCode}`).join('\n'); navigator.clipboard.writeText(txt); toast.success('ALL COPIED') }} style={{ height: '64px', flex: 1, background: '#111', border: '1px solid #1a1a1a', borderRadius: '16px', color: '#fff', fontWeight: 900, fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
+                  <Copy size={20} /> COPY ALL
                 </button>
-                <button onClick={() => { onSuccess(); onClose() }} style={{
-                  height: '52px', flex: 1, background: '#CBFF00', color: '#000',
-                  fontWeight: 900, fontSize: '13px', textTransform: 'uppercase',
-                  border: 'none', cursor: 'pointer', letterSpacing: '0.08em', borderRadius: '10px'
-                }}>
-                  FINISH
-                </button>
+                <button onClick={() => { onSuccess(); onClose() }} style={{ height: '64px', flex: 1, background: 'var(--accent)', color: '#000', fontWeight: 900, fontSize: '14px', border: 'none', cursor: 'pointer', borderRadius: '16px' }}>DONE</button>
               </div>
             </motion.div>
           )}
-
         </AnimatePresence>
       </motion.div>
     </div>

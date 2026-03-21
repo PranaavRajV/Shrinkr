@@ -1,22 +1,31 @@
 import { useState, useEffect } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { 
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
-  PieChart, Pie, Cell 
+  AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, 
+  PieChart, Pie, Cell, BarChart, Bar 
 } from 'recharts'
 import { 
-  Download, ArrowLeft, MousePointer2, Clock, Globe, BarChart2
+  Download, ArrowLeft, MousePointer2, Clock, Globe, BarChart2, Loader2, Share2, ExternalLink,
+  ShieldCheck, ShieldAlert, Cpu
 } from 'lucide-react'
 import api from '../lib/api'
 import toast from 'react-hot-toast'
 import Layout from '../components/Layout'
 import { format } from 'date-fns'
+import { Reveal, RevealText } from '../components/Reveal'
+import Card3D from '../components/Card3D'
+import Magnetic from '../components/Magnetic'
+import CountUp from '../components/CountUp'
+import { motion, AnimatePresence } from 'framer-motion'
+import AnalyticsHeatmap from '../components/HeatmapChart'
+import confetti from 'canvas-confetti'
+import { Sparkles, Trophy } from 'lucide-react'
 
 const COLORS = ['#CBFF00', '#A3CC00', '#7A9900', '#526600', '#2B3300']
 const DEVICE_COLORS: Record<string, string> = {
-  Desktop: '#CBFF00',
-  Mobile: '#A3CC00',
-  Tablet: '#526600',
+  desktop: '#CBFF00',
+  mobile: '#A3CC00',
+  tablet: '#526600',
   Other: '#333300'
 }
 
@@ -26,31 +35,47 @@ const S = {
     border: '1px solid var(--border)',
     borderRadius: 'var(--radius-lg)',
     padding: '32px',
+    height: '100%',
+    position: 'relative' as const,
   },
   label: {
     fontSize: '11px', fontWeight: 800 as const, color: 'var(--text-muted)',
     textTransform: 'uppercase' as const, letterSpacing: '0.12em', marginBottom: '12px'
   },
   chartTitle: {
-    fontSize: '18px', fontWeight: 900 as const, color: 'var(--text-primary)',
-    marginBottom: '32px', display: 'flex', alignItems: 'center', gap: '12px',
+    fontSize: '16px', fontWeight: 900 as const, color: 'var(--text-primary)',
+    marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '10px',
     letterSpacing: '-0.02em'
   }
 }
 
 export default function Analytics() {
   const { shortCode } = useParams()
+  const navigate = useNavigate()
   const [data, setData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [exporting, setExporting] = useState(false)
+  const [days, setDays] = useState(7)
+  const [clickFilter, setClickFilter] = useState<'all' | 'real' | 'bots'>('real')
 
-  useEffect(() => { fetchAnalytics() }, [shortCode])
+  useEffect(() => { fetchAnalytics() }, [shortCode, days])
 
   const fetchAnalytics = async () => {
     setLoading(true)
     try {
-      const res = await api.get(`/api/analytics/${shortCode}`)
+      const res = await api.get(`/api/analytics/${shortCode}`, { params: { days } })
       setData(res.data.data)
+      
+      // Celebrate if goal just reached and not notified
+      if (res.data.data.clickGoal && res.data.data.totalClicks >= res.data.data.clickGoal && !res.data.data.goalNotified) {
+        confetti({
+          particleCount: 150, spread: 80, origin: { y: 0.6 },
+          colors: ['#CBFF00', '#FFFFFF', '#333333']
+        })
+        toast.success(`GOAL REACHED! ${res.data.data.totalClicks} CLICKS`, {
+          icon: '🏆', duration: 5000
+        })
+      }
     } catch (err: any) {
       toast.error(err.response?.data?.error || 'Failed to load analytics')
     } finally {
@@ -67,7 +92,6 @@ export default function Analytics() {
         responseType: 'blob',
         headers: { Accept: 'text/csv' }
       })
-      // Force correct MIME type regardless of server Content-Type
       const blob = new Blob([res.data], { type: 'text/csv;charset=utf-8;' })
       const url = URL.createObjectURL(blob)
       const link = document.createElement('a')
@@ -85,34 +109,31 @@ export default function Analytics() {
     }
   }
 
-  if (loading) {
+  const handleShare = () => {
+    const publicUrl = `${window.location.origin}/s/${shortCode}`
+    navigator.clipboard.writeText(publicUrl)
+    toast.success('PUBLIC STATS URL COPIED!')
+  }
+
+  if (loading && !data) {
     return (
       <Layout>
-        <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: '13px', fontWeight: 800, letterSpacing: '0.2em' }}>
-          LOADING ANALYTICS...
+        <div style={{ minHeight: '60vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: '13px', fontWeight: 800, letterSpacing: '0.2em' }}>
+          <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}>
+            <Loader2 size={32} color="var(--accent)" />
+          </motion.div>
+          <br />LOADING ANALYTICS...
         </div>
       </Layout>
     )
   }
 
-  if (!data) {
-    return (
-      <Layout>
-        <div style={{ padding: '80px', textAlign: 'center' }}>
-          <div style={{ fontSize: '32px', fontWeight: 900, marginBottom: '16px' }}>Not Found</div>
-          <div style={{ color: 'var(--text-muted)' }}>No analytics found for this short code.</div>
-          <button onClick={() => window.history.back()} style={{ marginTop: '24px', background: 'var(--accent)', color: '#000', border: 'none', padding: '12px 28px', borderRadius: 'var(--radius-full)', fontWeight: 900, cursor: 'pointer' }}>
-            GO BACK
-          </button>
-        </div>
-      </Layout>
-    )
-  }
+  if (!data) return null
 
-  // Chart data from API
-  const dailyData = (data.clicksLast7Days || []).map((d: any) => ({
-    date: d.date ? format(new Date(d.date), 'MMM d') : d._id,
-    clicks: d.count || 0
+  const dailyData = (data.clicksTrend || []).map((d: any) => ({
+    date: format(new Date(d.date), days === 30 ? 'MMM d' : 'EEE'),
+    clicks: d.count || 0,
+    fullDate: format(new Date(d.date), 'MMM dd, yyyy')
   }))
 
   const deviceData = (data.topDevices || []).map((d: any) => ({
@@ -120,182 +141,319 @@ export default function Analytics() {
     value: d.count || 0
   }))
 
-  const totalDeviceClicks = deviceData.reduce((s: number, d: any) => s + d.value, 0)
+  const browserData = (data.topBrowsers || []).map((d: any) => ({
+    name: d._id || 'Unknown',
+    count: d.count || 0
+  }))
 
-  const lastVisited = data.lastVisited
-    ? format(new Date(data.lastVisited), 'MMM dd, yyyy HH:mm')
-    : 'No visits yet'
+  const countryData = (data.topCountries || []).slice(0, 5).map((d: any) => ({
+    name: d._id || 'Unknown',
+    count: d.count || 0
+  }))
+
+  const { totalClicks, realClicks, botClicks } = data
+  const lastVisited = data.lastVisited ? format(new Date(data.lastVisited), 'MMM dd, HH:mm') : '—'
+
+  const filteredClicks = (data.recentClicks || []).filter((c: any) => {
+    if (clickFilter === 'real') return !c.isBot
+    if (clickFilter === 'bots') return c.isBot
+    return true
+  })
 
   return (
     <Layout>
-      <div className="fade-in" style={{ padding: '40px' }}>
-
+      <div style={{ padding: '40px' }}>
+        
         {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '48px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '40px' }}>
           <div>
-            <h1 style={{ fontSize: '40px', fontWeight: 900, letterSpacing: '-0.04em' }}>Advanced Insights</h1>
-            <p style={{ color: 'var(--text-muted)', fontSize: '15px', marginTop: '4px' }}>
-              Deep-dive metrics for: <span style={{ color: 'var(--accent)' }}>/{shortCode}</span>
-            </p>
-            {data.originalUrl && (
-              <a href={data.originalUrl} target="_blank" rel="noreferrer" style={{ color: 'var(--text-muted)', fontSize: '13px', marginTop: '8px', display: 'block', textDecoration: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '500px' }}>
-                → {data.originalUrl}
-              </a>
-            )}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <RevealText text="Advanced Metrics" />
+              <Reveal delay={0.2}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(203,255,0,0.1)', color: 'var(--accent)', padding: '4px 12px', borderRadius: 'var(--radius-full)', fontSize: '11px', fontWeight: 900 }}>
+                  LIVE
+                </span>
+              </Reveal>
+            </div>
+            <Reveal delay={0.3}>
+              <div style={{ color: 'var(--text-muted)', fontSize: '14px', marginTop: '6px' }}>
+                Performance deep-dive for <span style={{ color: '#fff', fontWeight: 700 }}>/{shortCode}</span>
+              </div>
+            </Reveal>
           </div>
 
-          <button onClick={() => window.history.back()} style={{
-            background: 'none', border: '1px solid var(--border)', color: 'var(--text-secondary)',
-            padding: '12px 24px', borderRadius: 'var(--radius-full)', fontSize: '12px', fontWeight: 800,
-            cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px'
-          }}>
-            <ArrowLeft size={16} /> Back
-          </button>
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <Magnetic>
+              <button onClick={() => navigate('/links')} style={{ background: 'none', border: '1px solid var(--border)', color: 'var(--text-secondary)', padding: '12px 24px', borderRadius: 'var(--radius-full)', fontSize: '11px', fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <ArrowLeft size={16} /> BACK
+              </button>
+            </Magnetic>
+            <Magnetic>
+              <button onClick={handleShare} style={{ background: 'var(--accent)', color: '#000', border: 'none', padding: '12px 24px', borderRadius: 'var(--radius-full)', fontSize: '11px', fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Share2 size={16} /> SHARE STATS
+              </button>
+            </Magnetic>
+          </div>
         </div>
 
-        {/* Top Metric Cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '24px', marginBottom: '40px' }}>
+        {/* Quick Stats Grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '40px' }}>
           {[
-            { label: 'Total Clicks', val: (data.totalClicks || 0).toLocaleString(), icon: MousePointer2, sub: 'All time' },
-            { label: 'Last Visited', val: '—', icon: Clock, sub: lastVisited, smallVal: true },
-            { label: 'Devices Tracked', val: (deviceData.length).toString(), icon: Globe, sub: 'Device types' },
-          ].map((m, i) => (
-            <div key={i} style={{ ...S.card, position: 'relative' }}>
-              <div style={{ position: 'absolute', top: '24px', right: '24px', color: 'var(--text-muted)', opacity: 0.3 }}>
-                <m.icon size={24} />
-              </div>
-              <div style={S.label}>{m.label}</div>
-              {m.smallVal ? (
-                <div style={{ fontSize: '18px', fontWeight: 900, color: 'var(--text-primary)', marginBottom: '4px' }}>{m.sub}</div>
-              ) : (
-                <>
-                  <div style={{ fontSize: '40px', fontWeight: 900, letterSpacing: '-0.04em', color: 'var(--text-primary)', marginBottom: '4px' }}>{m.val}</div>
-                  <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{m.sub}</div>
-                </>
-              )}
-            </div>
+            { label: 'Total Clicks', val: totalClicks, icon: MousePointer2, color: 'var(--accent)' },
+            { label: 'Real Clicks', val: realClicks, icon: ShieldCheck, color: '#fff' },
+            { 
+              label: 'Click Goal Progress', 
+              val: data.clickGoal ? Math.round((totalClicks / data.clickGoal) * 100) : 0, 
+              label_val: data.clickGoal ? `${Math.round((totalClicks / data.clickGoal) * 100)}%` : 'NO GOAL',
+              icon: Trophy, 
+              color: data.clickGoal ? (totalClicks >= data.clickGoal ? 'var(--accent)' : '#fff') : 'var(--text-muted)',
+              sub: data.clickGoal ? `${totalClicks} / ${data.clickGoal} target` : 'Set a goal to track'
+            },
+            { label: 'Last Human Visit', val: 0, label_val: lastVisited, icon: Clock, color: '#fff' },
+          ].map((s, i) => (
+            <Reveal key={i} delay={0.4 + (i * 0.1)} direction="up" distance={10}>
+              <Card3D>
+                <div style={{ ...S.card, padding: '24px' }}>
+                  <div style={{ position: 'absolute', top: '20px', right: '20px', color: s.color, opacity: 0.4 }}>
+                    <s.icon size={20} />
+                  </div>
+                  <div style={S.label}>{s.label}</div>
+                  <div style={{ fontSize: s.label_val ? '18px' : '36px', fontWeight: 900, color: s.color }}>
+                    {s.label_val ? s.label_val : <CountUp value={s.val} />}
+                  </div>
+                  {s.sub && (
+                    <div style={{ marginTop: '12px' }}>
+                       {s.label === 'Click Goal Progress' && data.clickGoal && (
+                         <div style={{ height: '4px', background: 'rgba(255,255,255,0.05)', borderRadius: '2px', overflow: 'hidden', marginBottom: '8px' }}>
+                           <motion.div 
+                            initial={{ width: 0 }} 
+                            animate={{ width: `${Math.min((totalClicks / data.clickGoal) * 100, 100)}%` }} 
+                            style={{ height: '100%', background: 'var(--accent)' }} 
+                           />
+                         </div>
+                       )}
+                       <div style={{ fontSize: '9px', fontWeight: 800, color: 'var(--text-muted)' }}>{s.sub}</div>
+                    </div>
+                  )}
+                </div>
+              </Card3D>
+            </Reveal>
           ))}
         </div>
 
-        {/* Charts Row */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: '24px', marginBottom: '40px' }}>
-          {/* Daily Clicks */}
-          <div style={S.card}>
-            <h3 style={S.chartTitle}><BarChart2 size={20} color="var(--accent)" /> Daily Clicks (Last 7 Days)</h3>
-            {dailyData.length === 0 || dailyData.every((d: any) => d.clicks === 0) ? (
-              <div style={{ height: '280px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>
-                No click data yet — share your link to start tracking!
+        {/* Main Chart Section */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1.8fr 1fr', gap: '24px', marginBottom: '40px' }}>
+          <Reveal delay={0.8} direction="up">
+            <div style={{ ...S.card, height: '420px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
+                <h3 style={{ ...S.chartTitle, marginBottom: 0 }}>Click Trends</h3>
+                <div style={{ display: 'flex', background: 'var(--bg)', borderRadius: '8px', padding: '4px', border: '1px solid var(--border)' }}>
+                  {[7, 30].map(d => (
+                    <button key={d} onClick={() => setDays(d)} style={{
+                      padding: '6px 16px', fontSize: '10px', fontWeight: 900,
+                      border: 'none', borderRadius: '6px',
+                      background: days === d ? 'var(--accent)' : 'transparent',
+                      color: days === d ? '#000' : 'var(--text-muted)',
+                      cursor: 'pointer'
+                    }}>{d}D</button>
+                  ))}
+                </div>
               </div>
-            ) : (
-              <div style={{ height: '280px' }}>
-                <ResponsiveContainer>
+              
+              <div style={{ height: '300px' }}>
+                <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={dailyData}>
                     <defs>
-                      <linearGradient id="clickGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#CBFF00" stopOpacity={0.3} />
-                        <stop offset="95%" stopColor="#CBFF00" stopOpacity={0} />
+                      <linearGradient id="colorClicks" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="var(--accent)" stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor="var(--accent)" stopOpacity={0}/>
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1a1a1a" />
-                    <XAxis dataKey="date" axisLine={false} tickLine={false} fontSize={11} tick={{ fill: 'var(--text-muted)' }} />
-                    <YAxis axisLine={false} tickLine={false} fontSize={11} tick={{ fill: 'var(--text-muted)' }} allowDecimals={false} />
-                    <Tooltip
-                      contentStyle={{ background: '#111', border: '1px solid #222', borderRadius: '8px', fontSize: '12px' }}
-                      labelStyle={{ color: '#fff', fontWeight: 800 }}
+                    <XAxis 
+                      dataKey="date" 
+                      axisLine={false} 
+                      tickLine={false} 
+                      tick={{ fill: '#555', fontSize: 10, fontWeight: 700 }}
+                      dy={10}
                     />
-                    <Area type="monotone" dataKey="clicks" stroke="#CBFF00" strokeWidth={2} fill="url(#clickGradient)" />
+                    <YAxis hide />
+                    <Tooltip 
+                      cursor={{ stroke: '#222', strokeWidth: 1 }}
+                      contentStyle={{ background: '#111', border: '1px solid #222', borderRadius: '8px', boxShadow: '0 10px 30px rgba(0,0,0,0.5)' }}
+                      labelStyle={{ color: 'var(--accent)', fontWeight: 900, marginBottom: '4px', fontSize: '11px' }}
+                      itemStyle={{ color: '#fff', fontSize: '14px', fontWeight: 700 }}
+                      formatter={(val) => [`${val} clicks`]}
+                      labelFormatter={(label, items) => items[0]?.payload.fullDate || label}
+                    />
+                    <Area 
+                      type="monotone" 
+                      dataKey="clicks" 
+                      stroke="var(--accent)" 
+                      strokeWidth={3} 
+                      fillOpacity={1} 
+                      fill="url(#colorClicks)" 
+                      animationDuration={1500}
+                    />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
-            )}
-          </div>
+            </div>
+          </Reveal>
 
-          {/* Device Split */}
-          <div style={S.card}>
-            <h3 style={S.chartTitle}><Globe size={20} color="var(--accent)" /> Device Split</h3>
-            {deviceData.length === 0 ? (
-              <div style={{ height: '280px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>
-                No device data yet
-              </div>
-            ) : (
-              <div style={{ height: '280px', position: 'relative' }}>
-                <ResponsiveContainer>
+          <Reveal delay={0.9} direction="up">
+            <div style={{ ...S.card, height: '420px' }}>
+              <h3 style={S.chartTitle}>Device Breakdown</h3>
+              <div style={{ height: '240px' }}>
+                <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    <Pie data={deviceData} cx="50%" cy="50%" innerRadius={70} outerRadius={110} paddingAngle={6} dataKey="value">
-                      {deviceData.map((e: any, i: number) => <Cell key={i} fill={DEVICE_COLORS[e.name] || COLORS[i % COLORS.length]} />)}
+                    <Pie
+                      data={deviceData}
+                      innerRadius={65}
+                      outerRadius={90}
+                      paddingAngle={8}
+                      dataKey="value"
+                    >
+                      {deviceData.map((d: any, i: number) => (
+                        <Cell key={`cell-${i}`} fill={DEVICE_COLORS[d.name.toLowerCase()] || COLORS[i % COLORS.length]} />
+                      ))}
                     </Pie>
                     <Tooltip contentStyle={{ background: '#111', border: '1px solid #222', borderRadius: '8px' }} />
                   </PieChart>
                 </ResponsiveContainer>
-                <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center', pointerEvents: 'none' }}>
-                  <div style={{ fontSize: '28px', fontWeight: 900 }}>{totalDeviceClicks}</div>
-                  <div style={{ fontSize: '10px', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Total</div>
+                <div style={{ position: 'absolute', top: '55%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center', pointerEvents: 'none' }}>
+                  <div style={{ fontSize: '28px', fontWeight: 900 }}>{totalClicks}</div>
+                  <div style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 800 }}>CLICKS</div>
                 </div>
               </div>
-            )}
-            {/* Legend */}
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginTop: '16px' }}>
-              {deviceData.map((d: any, i: number) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 700 }}>
-                  <div style={{ width: '10px', height: '10px', borderRadius: '2px', background: DEVICE_COLORS[d.name] || COLORS[i % COLORS.length] }} />
-                  {d.name}: {d.value}
-                </div>
-              ))}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '20px' }}>
+                {deviceData.map((d: any, i: number) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px' }}>
+                    <div style={{ width: '8px', height: '8px', borderRadius: '2px', background: DEVICE_COLORS[d.name.toLowerCase()] || COLORS[i % COLORS.length] }} />
+                    <span style={{ color: 'var(--text-muted)', fontWeight: 700 }}>{d.name}</span>
+                    <span style={{ marginLeft: 'auto', fontWeight: 900 }}>{((d.value / Math.max(1, totalClicks)) * 100).toFixed(0)}%</span>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          </Reveal>
         </div>
 
-        {/* Recent Visit History */}
-        {data.recentClicks && data.recentClicks.length > 0 && (
-          <div style={{ ...S.card, marginBottom: '24px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
-              <h3 style={{ ...S.chartTitle, marginBottom: 0 }}><Clock size={20} color="var(--accent)" /> Recent Visit History</h3>
-              <button
-                onClick={handleExport}
-                disabled={exporting}
-                style={{
-                  background: 'none', border: '1px solid var(--border)', color: 'var(--accent)',
-                  padding: '10px 20px', borderRadius: '8px', fontSize: '11px', fontWeight: 800,
-                  cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px'
-                }}
-              >
-                <Download size={14} /> Export CSV
-              </button>
-            </div>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ borderBottom: '1px solid var(--border)', textAlign: 'left' }}>
-                  {['Timestamp', 'Device', 'Browser', 'Referrer'].map(h => (
-                    <th key={h} style={{ padding: '12px 16px', fontSize: '11px', color: 'var(--text-muted)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {data.recentClicks.map((c: any, i: number) => (
-                  <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                    <td style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600 }}>
-                      {c.timestamp ? format(new Date(c.timestamp), 'MMM dd yyyy, HH:mm:ss') : '—'}
-                    </td>
-                    <td style={{ padding: '14px 16px', fontSize: '13px', color: 'var(--text-secondary)' }}>{c.device || 'Unknown'}</td>
-                    <td style={{ padding: '14px 16px', fontSize: '13px', color: 'var(--text-secondary)' }}>{c.browser || 'Unknown'}</td>
-                    <td style={{ padding: '14px 16px', fontSize: '13px', color: 'var(--text-muted)', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {c.referrer || 'Direct'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        {/* HEATMAP & INSIGHTS */}
+        <Reveal delay={1.0} direction="up">
+           <AnalyticsHeatmap 
+              hourData={data.hourData || []} 
+              dayData={data.dayData || []} 
+           />
+        </Reveal>
 
-        {/* Empty state for no visits */}
-        {(!data.recentClicks || data.recentClicks.length === 0) && (data.totalClicks === 0) && (
-          <div style={{ ...S.card, textAlign: 'center', padding: '60px' }}>
-            <MousePointer2 size={40} color="var(--text-muted)" style={{ margin: '0 auto 16px' }} />
-            <div style={{ fontSize: '18px', fontWeight: 800, marginBottom: '8px' }}>No visits yet</div>
-            <div style={{ color: 'var(--text-muted)', fontSize: '13px' }}>Share your short link to start seeing analytics here.</div>
+        {/* Secondary Charts Row */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '24px', marginBottom: '40px', marginTop: '40px' }}>
+          <Reveal delay={1.1} direction="up">
+            <div style={S.card}>
+              <h3 style={S.chartTitle}>Top 5 Countries</h3>
+              <div style={{ height: '240px' }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={countryData} layout="vertical">
+                    <XAxis type="number" hide />
+                    <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fill: '#fff', fontSize: 11, fontWeight: 800 }} width={40} />
+                    <Tooltip cursor={{ fill: 'rgba(255,255,255,0.03)' }} contentStyle={{ background: '#111', border: '1px solid #222' }} />
+                    <Bar dataKey="count" fill="var(--accent)" radius={[0, 4, 4, 0]} barSize={24} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </Reveal>
+
+          <Reveal delay={1.2} direction="up">
+            <div style={S.card}>
+              <h3 style={S.chartTitle}>Traffic Sources</h3>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                {(data.referrerMediums || []).map((m: any, i: number) => (
+                  <div key={i} style={{ padding: '20px', background: 'var(--bg)', borderRadius: '16px', border: '1px solid var(--border)' }}>
+                    <div style={{ fontSize: '10px', fontWeight: 900, color: 'var(--text-muted)', marginBottom: '4px' }}>{m._id?.toUpperCase() || 'DIRECT'}</div>
+                    <div style={{ fontSize: '24px', fontWeight: 900 }}>{m.count}</div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ marginTop: '32px' }}>
+                <div style={S.label}>TOP REFERRERS</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {(data.topReferrers || []).slice(0, 5).map((r: any, i: number) => (
+                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px' }}>
+                      <span style={{ fontWeight: 800, color: '#fff' }}>{r._id || 'Direct / Unknown'}</span>
+                      <span style={{ fontSize: '11px', fontWeight: 900, color: 'var(--accent)', background: 'rgba(203,255,0,0.1)', padding: '2px 8px', borderRadius: '4px' }}>{r.count} CLKS</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </Reveal>
+        </div>
+
+        {/* Visit Log */}
+        <Reveal delay={1.3} direction="up">
+          <div style={S.card}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+                <h3 style={{ ...S.chartTitle, marginBottom: 0 }}>Recent Activities</h3>
+                <div style={{ display: 'flex', background: 'var(--bg)', borderRadius: '8px', padding: '4px', border: '1px solid var(--border)' }}>
+                  {['ALL', 'REAL', 'BOTS'].map(f => (
+                    <button
+                      key={f}
+                      onClick={() => setClickFilter(f.toLowerCase() as any)}
+                      style={{
+                        padding: '6px 14px', fontSize: '9px', fontWeight: 900,
+                        border: 'none', borderRadius: '6px',
+                        background: clickFilter === f.toLowerCase() ? 'rgba(255,255,255,0.05)' : 'transparent',
+                        color: clickFilter === f.toLowerCase() ? 'var(--accent)' : 'var(--text-muted)',
+                        cursor: 'pointer', transition: 'all 0.2s', letterSpacing: '0.05em'
+                      }}
+                    >
+                      {f}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <Magnetic>
+                <button onClick={handleExport} style={{ background: 'none', border: '1px solid var(--border)', color: 'var(--text-secondary)', padding: '8px 16px', borderRadius: '8px', fontSize: '11px', fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Download size={14} /> EXPORT CSV
+                </button>
+              </Magnetic>
+            </div>
+            
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--border)' }}>
+                    {['TIME', 'IP ADDRESS', 'COUNTRY', 'BROWSER', 'DEVICE', 'REFERRER'].map(h => (
+                      <th key={h} style={{ padding: '12px 16px', fontSize: '10px', color: 'var(--text-muted)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em' }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredClicks.map((c: any, i: number) => (
+                    <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)', opacity: c.isBot ? 0.4 : 1, transition: 'opacity 0.3s' }}>
+                      <td style={{ padding: '16px', fontSize: '13px', color: '#fff', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        {format(new Date(c.timestamp), 'MMM dd, HH:mm:ss')}
+                        {c.isBot && (
+                          <span style={{ fontSize: '8px', fontWeight: 900, background: '#311', color: '#ff4444', padding: '2px 6px', borderRadius: '4px', border: '1px solid #511' }} title={c.botReason || 'Detected as bot'}>BOT</span>
+                        )}
+                      </td>
+                      <td style={{ padding: '16px', fontSize: '13px', color: 'var(--text-muted)', fontFamily: 'monospace' }}>{c.ip?.replace(/\.[0-9]+\.[0-9]+$/, '.X.X')}</td>
+                      <td style={{ padding: '16px', fontSize: '13px', color: '#fff' }}>{c.country || 'Unknown'}</td>
+                      <td style={{ padding: '16px', fontSize: '13px', color: 'var(--text-secondary)' }}>
+                        {c.isBot ? <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Cpu size={12} /> {c.browser}</span> : c.browser || 'Other'}
+                      </td>
+                      <td style={{ padding: '16px', fontSize: '13px', color: 'var(--text-secondary)' }}>{c.device?.toUpperCase()}</td>
+                      <td style={{ padding: '16px', fontSize: '13px', color: 'var(--text-muted)', maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.referrer || 'DIRECT'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-        )}
+        </Reveal>
+
       </div>
     </Layout>
   )

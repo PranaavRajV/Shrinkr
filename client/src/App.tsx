@@ -1,8 +1,11 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import { AuthProvider } from './contexts/AuthContext'
-import { Suspense, lazy, Component } from 'react'
-import CustomCursor from './components/CustomCursor'
+import { Suspense, lazy, Component, useEffect } from 'react'
+import Cursor from './components/Cursor'
+import PageLoader from './components/PageLoader'
+import { useSmoothScroll } from './hooks/useSmoothScroll'
+import { motion, AnimatePresence, useScroll, useSpring } from 'framer-motion'
 import type { ReactNode } from 'react'
 
 // Lazy-loaded pages
@@ -16,43 +19,22 @@ const AnalyticsPicker = lazy(() => import('./pages/AnalyticsPicker'))
 const PublicStats     = lazy(() => import('./pages/PublicStats'))
 const Profile         = lazy(() => import('./pages/Profile'))
 const HelpCenter      = lazy(() => import('./pages/HelpCenter'))
+const BioPage         = lazy(() => import('./pages/BioPage'))
+const BioSettings     = lazy(() => import('./pages/BioSettings'))
+const ApiKeys         = lazy(() => import('./pages/ApiKeys'))
 
 // ─── Shared loader (Dark/Neon) ────────────────────────────────────────────────
-const PageLoader = () => (
-  <div style={{
-    minHeight: '100vh',
-    background: '#0A0A0A',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    color: '#CBFF00',
-    fontSize: '11px',
-    fontWeight: 900,
-    letterSpacing: '0.25em',
-    textTransform: 'uppercase',
-    fontFamily: 'Space Grotesk, sans-serif',
-  }}>
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '24px' }}>
-       <div style={{ 
-         width: '48px', height: '1px', background: '#222', 
-         position: 'relative', overflow: 'hidden'
-       }}>
-          <div style={{
-            position: 'absolute', inset: 0, background: '#CBFF00',
-            animation: 'slide 1.5s infinite ease-in-out'
-          }} />
-       </div>
-       ZURL ARCHITECTURE
-    </div>
-  </div>
-)
-
-const loaderStyles = `
-  @keyframes slide {
-    0% { transform: translateX(-100%); }
-    100% { transform: translateX(100%); }
+const pageVariants = {
+  initial: { opacity: 0, y: 20, filter: 'blur(8px)' },
+  animate: { 
+    opacity: 1, y: 0, filter: 'blur(0px)',
+    transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] as any }
+  },
+  exit: { 
+    opacity: 0, y: -20, filter: 'blur(8px)',
+    transition: { duration: 0.3, ease: [0.22, 1, 0.36, 1] as any }
   }
-`
+}
 
 // ─── Error boundary ───────────────────────────────────────────────────────────
 class PageErrorBoundary extends Component<
@@ -104,34 +86,53 @@ const ProtectedRoute = ({ children }: { children: ReactNode }) => {
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
 function AppRoutes() {
+  const location = useLocation()
+  
   return (
-    <Suspense fallback={<PageLoader />}>
-      <Routes>
-        <Route path="/" element={<PageErrorBoundary><Landing /></PageErrorBoundary>} />
-        <Route path="/login" element={<PageErrorBoundary><Login /></PageErrorBoundary>} />
-        <Route path="/register" element={<PageErrorBoundary><Register /></PageErrorBoundary>} />
-        <Route path="/s/:shortCode" element={<PageErrorBoundary><PublicStats /></PageErrorBoundary>} />
-        <Route path="/dashboard" element={
-          <ProtectedRoute><PageErrorBoundary><Dashboard /></PageErrorBoundary></ProtectedRoute>
-        } />
-        <Route path="/links" element={
-          <ProtectedRoute><PageErrorBoundary><Links /></PageErrorBoundary></ProtectedRoute>
-        } />
-        <Route path="/analytics/:shortCode" element={
-          <ProtectedRoute><PageErrorBoundary><Analytics /></PageErrorBoundary></ProtectedRoute>
-        } />
-        <Route path="/analytics" element={
-          <ProtectedRoute><PageErrorBoundary><AnalyticsPicker /></PageErrorBoundary></ProtectedRoute>
-        } />
-        <Route path="/profile" element={
-          <ProtectedRoute><PageErrorBoundary><Profile /></PageErrorBoundary></ProtectedRoute>
-        } />
-        <Route path="/help" element={
-          <ProtectedRoute><PageErrorBoundary><HelpCenter /></PageErrorBoundary></ProtectedRoute>
-        } />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </Suspense>
+    <AnimatePresence mode="wait">
+      <motion.div
+        key={location.pathname}
+        variants={pageVariants}
+        initial="initial"
+        animate="animate"
+        exit="exit"
+      >
+        <Suspense fallback={null}>
+          <Routes location={location} key={location.pathname}>
+            <Route path="/" element={<PageErrorBoundary><Landing /></PageErrorBoundary>} />
+            <Route path="/login" element={<PageErrorBoundary><Login /></PageErrorBoundary>} />
+            <Route path="/register" element={<PageErrorBoundary><Register /></PageErrorBoundary>} />
+            <Route path="/s/:shortCode" element={<PageErrorBoundary><PublicStats /></PageErrorBoundary>} />
+            <Route path="/dashboard" element={
+              <ProtectedRoute><PageErrorBoundary><Dashboard /></PageErrorBoundary></ProtectedRoute>
+            } />
+            <Route path="/links" element={
+              <ProtectedRoute><PageErrorBoundary><Links /></PageErrorBoundary></ProtectedRoute>
+            } />
+            <Route path="/analytics/:shortCode" element={
+              <ProtectedRoute><PageErrorBoundary><Analytics /></PageErrorBoundary></ProtectedRoute>
+            } />
+            <Route path="/analytics" element={
+              <ProtectedRoute><PageErrorBoundary><AnalyticsPicker /></PageErrorBoundary></ProtectedRoute>
+            } />
+            <Route path="/profile" element={
+              <ProtectedRoute><PageErrorBoundary><Profile /></PageErrorBoundary></ProtectedRoute>
+            } />
+            <Route path="/help" element={
+              <ProtectedRoute><PageErrorBoundary><HelpCenter /></PageErrorBoundary></ProtectedRoute>
+            } />
+            <Route path="/dashboard/bio" element={
+              <ProtectedRoute><PageErrorBoundary><BioSettings /></PageErrorBoundary></ProtectedRoute>
+            } />
+            <Route path="/dashboard/api" element={
+              <ProtectedRoute><PageErrorBoundary><ApiKeys /></PageErrorBoundary></ProtectedRoute>
+            } />
+            <Route path="/u/:username" element={<PageErrorBoundary><BioPage /></PageErrorBoundary>} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Suspense>
+      </motion.div>
+    </AnimatePresence>
   )
 }
 
@@ -141,15 +142,32 @@ import { NotificationProvider } from './contexts/NotificationContext'
 // ─── App ──────────────────────────────────────────────────────────────────────
 export default function App() {
   const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || 'dummy-client-id'
+  const location = useLocation()
+  useSmoothScroll()
+
+  const { scrollYProgress } = useScroll()
+  const scaleX = useSpring(scrollYProgress, {
+    stiffness: 100, damping: 30, restDelta: 0.001
+  })
+
+  // Show scroll progress only on Landing and Analytics
+  const showProgress = location.pathname === '/' || location.pathname.startsWith('/analytics')
 
   return (
     <GoogleOAuthProvider clientId={clientId}>
-      <BrowserRouter>
-        <style>{loaderStyles}</style>
-        <AuthProvider>
+      <PageLoader />
+      <Cursor />
+      {showProgress && (
+        <motion.div
+          style={{
+            position: 'fixed', top: 0, left: 0, right: 0, height: '2px',
+            background: 'var(--accent)', transformOrigin: '0%', scaleX, zIndex: 999999
+          }}
+        />
+      )}
+      <AuthProvider>
           <NotificationProvider>
-          <CustomCursor />
-          <AppRoutes />
+            <AppRoutes />
           <Toaster
             position="bottom-right"
             toastOptions={{
@@ -170,7 +188,14 @@ export default function App() {
           />
           </NotificationProvider>
         </AuthProvider>
-      </BrowserRouter>
     </GoogleOAuthProvider>
+  )
+}
+
+export function AppWrapper() {
+  return (
+    <BrowserRouter>
+      <App />
+    </BrowserRouter>
   )
 }

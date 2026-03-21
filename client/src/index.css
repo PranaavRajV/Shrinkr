@@ -29,6 +29,24 @@
   --shadow-glow: 0 0 20px rgba(203, 255, 0, 0.1);
 }
 
+[data-theme="light"] {
+  --bg: #F9F9FB;
+  --bg-secondary: #FFFFFF;
+  --card-bg: #FFFFFF;
+  --text-primary: #1A1A1E;
+  --text-secondary: #5E5E6B;
+  --text-muted: #A0A0B0;
+  --border: #E8E8EC;
+  --accent: #CBFF00;
+  --accent-glow: rgba(203, 255, 0, 0.5);
+  --accent-soft: rgba(203, 255, 0, 0.1);
+  --shadow-glow: 0 0 20px rgba(203, 255, 0, 0.2);
+}
+
+* {
+  transition: background-color 200ms ease, color 200ms ease, border-color 200ms ease;
+}
+
 html {
   scroll-behavior: smooth;
   color-scheme: dark;
@@ -130,4 +148,13 @@ input::placeholder {
 
 .pulse-glow {
   animation: pulse-accent 2s infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

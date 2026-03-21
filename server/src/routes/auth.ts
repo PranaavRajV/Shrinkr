@@ -42,6 +42,14 @@ const signRefreshToken = (id: string, email: string) => {
   )
 }
 
+const signTempJWT = (id: string, email: string) => {
+  return jwt.sign(
+    { sub: id, email, type: '2fa' },
+    process.env.JWT_ACCESS_SECRET || 'secret',
+    { expiresIn: '5m' }
+  )
+}
+
 // ROUTE HANDLERS
 
 /**
@@ -105,6 +113,13 @@ router.post('/login', async (req: Request, res: Response, next) => {
     const isMatch = await user.comparePassword(req.body.password)
     if (!isMatch) {
       return fail(res, 401, 'Invalid login credentials', 'INVALID_CREDENTIALS')
+    }
+
+    if (user.twoFactorEnabled) {
+      return ok(res, {
+        requiresTwoFactor: true,
+        tempToken: signTempJWT(user._id.toString(), user.email)
+      }, 'Two-factor authentication required')
     }
 
     const accessToken = signAccessToken(user._id.toString(), user.email)
@@ -204,6 +219,13 @@ router.post('/google', async (req: Request, res: Response, next: NextFunction) =
       await user.save()
     }
 
+    if (user.twoFactorEnabled) {
+      return ok(res, {
+        requiresTwoFactor: true,
+        tempToken: signTempJWT(user._id.toString(), user.email)
+      }, 'Two-factor authentication required')
+    }
+
     const accessToken = signAccessToken(user._id.toString(), user.email)
     const refreshToken = signRefreshToken(user._id.toString(), user.email)
 
@@ -243,6 +265,84 @@ router.post('/logout', async (req: Request, res: Response, next) => {
     }
 
     return ok(res, { message: 'Logged out successfully' })
+  } catch (err) {
+    next(err)
+  }
+})
+
+/**
+ * @route POST /api/auth/2fa/authenticate
+ */
+router.post('/2fa/authenticate', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { tempToken, token, backupCode } = req.body
+    if (!tempToken || (!token && !backupCode)) {
+      return fail(res, 400, 'Missing authentication data', 'REQUIRED_FIELDS')
+    }
+
+    const secret = process.env.JWT_ACCESS_SECRET || 'secret'
+    let decoded: any
+    try {
+      decoded = jwt.verify(tempToken, secret)
+    } catch (err) {
+      return fail(res, 401, 'Temporary token expired or invalid', 'INVALID_TEMP_TOKEN')
+    }
+
+    if (decoded.type !== '2fa') {
+      return fail(res, 401, 'Invalid token type', 'INVALID_TOKEN')
+    }
+
+    const user = await User.findById(decoded.sub).select('+twoFactorSecret +twoFactorEnabled +twoFactorBackupCodes')
+    if (!user || !user.twoFactorEnabled) {
+      return fail(res, 404, 'User not found or 2FA not enabled', 'USER_NOT_FOUND')
+    }
+
+    let success = false
+    if (token) {
+      const speakeasy = (await import('speakeasy')).default
+      success = speakeasy.totp.verify({
+        secret: user.twoFactorSecret!,
+        encoding: 'base32',
+        token,
+        window: 1
+      })
+    } else if (backupCode) {
+      const bcrypt = (await import('bcryptjs')).default
+      const upperCode = backupCode.toUpperCase()
+      
+      const matchedIndex = await Promise.race(
+        (user.twoFactorBackupCodes || []).map(async (hashed, idx) => {
+          const match = await bcrypt.compare(upperCode, hashed)
+          return match ? idx : -1
+        })
+      )
+      
+      // Wait, Promise.race won't work easily here to find the index. 
+      // I'll use a simple loop or Promise.all.
+      const matchResults = await Promise.all(
+        (user.twoFactorBackupCodes || []).map(hashed => bcrypt.compare(upperCode, hashed))
+      )
+      const idx = matchResults.findIndex(r => r === true)
+      
+      if (idx !== -1) {
+        success = true
+        user.twoFactorBackupCodes?.splice(idx, 1) // Consume code
+        await user.save()
+      }
+    }
+
+    if (!success) {
+      return fail(res, 401, 'Invalid 2FA code or backup code', 'INVALID_CODE')
+    }
+
+    const accessToken = signAccessToken(user._id.toString(), user.email)
+    const refreshToken = signRefreshToken(user._id.toString(), user.email)
+
+    return ok(res, {
+      user: { id: user._id.toString(), email: user.email },
+      accessToken,
+      refreshToken
+    }, 'MFA verification successful')
   } catch (err) {
     next(err)
   }

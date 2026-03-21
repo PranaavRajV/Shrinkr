@@ -11,6 +11,24 @@ export interface UserAttrs {
   name?: string
   avatar?: string   // base64 data URL or external URL
   bio?: string
+  
+  // Feature 1: Link in Bio
+  username?: string
+  bioName?: string
+  bioDescription?: string
+  bioAvatar?: string
+  bioTheme?: 'dark' | 'light' | 'accent'
+  bioLinks?: {
+    urlId: Types.ObjectId
+    order: number
+    showClickCount: boolean
+    customTitle?: string
+  }[]
+
+  // Feature 5: 2FA
+  twoFactorSecret?: string
+  twoFactorEnabled?: boolean
+  twoFactorBackupCodes?: string[]
 }
 
 export interface UserMethods {
@@ -63,6 +81,33 @@ const UserSchema = new Schema<UserDocument, UserModel, UserMethods>(
       maxlength: 200,
       default: '',
     },
+    // Bio Page Fields
+    username: { 
+      type: String, 
+      unique: true, 
+      sparse: true,
+      trim: true,
+      lowercase: true,
+      match: [/^[a-zA-Z0-9_]{3,20}$/, 'Invalid username format']
+    },
+    bioName: { type: String, default: '' },
+    bioDescription: { type: String, default: '', maxlength: 160 },
+    bioAvatar: { type: String, default: '' },
+    bioTheme: { 
+      type: String, 
+      default: 'dark',
+      enum: ['dark', 'light', 'accent']
+    },
+    bioLinks: [{
+      urlId: { type: Schema.Types.ObjectId, ref: 'Url' },
+      order: { type: Number, default: 0 },
+      showClickCount: { type: Boolean, default: true },
+      customTitle: { type: String, default: '' }
+    }],
+    // 2FA Fields
+    twoFactorSecret: { type: String, default: null },
+    twoFactorEnabled: { type: Boolean, default: false },
+    twoFactorBackupCodes: [{ type: String }]
   },
   { timestamps: true },
 )

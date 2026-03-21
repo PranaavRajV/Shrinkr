@@ -15,8 +15,29 @@ export interface UrlAttrs {
   expiresAt?: Date
   isActive?: boolean
   totalClicks?: number
+  realClicks?: number
   linkPassword?: string | null
   tags?: string[]
+  targeting?: {
+    mobile?: string | null
+    tablet?: string | null
+    countries?: Array<{ code: string, url: string }>
+  }
+  ogData?: {
+    title: string
+    description: string
+    image: string
+    favicon: string
+    siteName: string
+  }
+  isPinned?: boolean
+  note?: string
+  webhookUrl?: string | null
+  webhookSecret?: string | null
+  clickGoal?: number | null
+  goalReachedAt?: Date | null
+  goalNotified?: boolean
+  lastClickAt?: Date | null
 }
 
 export type UrlDocument = Document<unknown, unknown, UrlAttrs> &
@@ -29,8 +50,29 @@ export type UrlDocument = Document<unknown, unknown, UrlAttrs> &
     updatedAt: Date
     isActive: boolean
     totalClicks: number
+    realClicks: number
     linkPassword?: string | null
     tags: string[]
+    targeting?: {
+      mobile?: string | null
+      tablet?: string | null
+      countries?: Array<{ code: string, url: string }>
+    }
+    ogData: {
+      title: string
+      description: string
+      image: string
+      favicon: string
+      siteName: string
+    }
+    isPinned: boolean
+    note: string
+    webhookUrl: string | null
+    webhookSecret: string | null
+    clickGoal?: number | null
+    goalReachedAt?: Date | null
+    goalNotified: boolean
+    lastClickAt?: Date | null
   }
 
 export type UrlModel = Model<UrlDocument>
@@ -81,6 +123,11 @@ const UrlSchema = new Schema<UrlDocument, UrlModel>(
       required: false,
       default: 0,
     },
+    realClicks: {
+      type: Number,
+      required: false,
+      default: 0,
+    },
     linkPassword: {
       type: String,
       required: false,
@@ -90,6 +137,57 @@ const UrlSchema = new Schema<UrlDocument, UrlModel>(
       type: [String],
       default: [],
     },
+    targeting: {
+      mobile: { type: String, default: null },
+      tablet: { type: String, default: null },
+      countries: [{
+        code: { type: String, uppercase: true },
+        url: { type: String }
+      }]
+    },
+    ogData: {
+      title: { type: String, default: '' },
+      description: { type: String, default: '' },
+      image: { type: String, default: '' },
+      favicon: { type: String, default: '' },
+      siteName: { type: String, default: '' }
+    },
+    isPinned: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    note: {
+      type: String,
+      default: '',
+      maxLength: 500
+    },
+    webhookUrl: {
+      type: String,
+      default: null,
+      trim: true,
+    },
+    webhookSecret: {
+      type: String,
+      default: null,
+      trim: true,
+    },
+    clickGoal: {
+      type: Number,
+      default: null
+    },
+    goalReachedAt: {
+      type: Date,
+      default: null
+    },
+    goalNotified: {
+      type: Boolean,
+      default: false
+    },
+    lastClickAt: {
+      type: Date,
+      default: null
+    }
   },
   { timestamps: true },
 )
@@ -98,4 +196,3 @@ const UrlSchema = new Schema<UrlDocument, UrlModel>(
 export const Url = model<UrlDocument, UrlModel>('Url', UrlSchema)
 
 export type { UrlAttrs as UrlInput }
-

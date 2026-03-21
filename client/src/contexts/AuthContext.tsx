@@ -8,14 +8,16 @@ interface User {
   name?: string
   avatar?: string
   bio?: string
+  twoFactorEnabled?: boolean
 }
 
 interface AuthContextType {
   user: User | null
   token: string | null
-  login: (email: string, password: string) => Promise<void>
+  login: (email: string, password: string) => Promise<any>
   register: (email: string, password: string) => Promise<void>
-  googleLogin: (idToken: string) => Promise<void>
+  googleLogin: (idToken: string) => Promise<any>
+  verify2FA: (tempToken: string, token: string) => Promise<void>
   logout: () => void
   refreshProfile: () => Promise<void>
   isLoading: boolean
@@ -62,12 +64,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (email: string, password: string) => {
     const res = await api.post('/api/auth/login', { email, password })
+    if (res.data.data.requiresTwoFactor) {
+      return res.data.data // contains tempToken
+    }
     const { accessToken, user: userData } = res.data.data
     localStorage.setItem('shrinkr_token', accessToken)
     setToken(accessToken)
     setUser(userData)
     // Fetch full profile after login
     api.get('/api/users/me').then(r => setUser(r.data.data)).catch(() => {})
+    return res.data.data
   }
 
   const register = async (email: string, password: string) => {
@@ -80,10 +86,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const googleLogin = async (idToken: string) => {
     const res = await api.post('/api/auth/google', { idToken })
+    if (res.data.data.requiresTwoFactor) {
+      return res.data.data
+    }
     const { accessToken, user: userData } = res.data.data
     localStorage.setItem('shrinkr_token', accessToken)
     setToken(accessToken)
     setUser(userData)
+    return res.data.data
+  }
+
+  const verify2FA = async (tempToken: string, token: string) => {
+    const res = await api.post('/api/auth/2fa/authenticate', { tempToken, token })
+    const { accessToken, user: userData } = res.data.data
+    localStorage.setItem('shrinkr_token', accessToken)
+    setToken(accessToken)
+    setUser(userData)
+    api.get('/api/users/me').then(r => setUser(r.data.data)).catch(() => {})
   }
 
   const logout = () => {
@@ -117,7 +136,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider value={{
-      user, token, login, register, googleLogin, logout, refreshProfile, isLoading
+      user, token, login, register, googleLogin, verify2FA, logout, refreshProfile, isLoading
     }}>
       {children}
     </AuthContext.Provider>

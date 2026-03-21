@@ -1,7 +1,7 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import { 
   LayoutDashboard, Link2, BarChart3, Settings, 
-  Plus, HelpCircle, LogOut 
+  Plus, HelpCircle, LogOut, Share2, Terminal
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 
@@ -13,6 +13,8 @@ export default function Sidebar({ onCreateLink }: { onCreateLink?: () => void })
     { icon: LayoutDashboard, label: 'DASHBOARD', path: '/dashboard' },
     { icon: Link2, label: 'MY LINKS', path: '/links' },
     { icon: BarChart3, label: 'ANALYTICS', path: '/analytics' },
+    { icon: Share2, label: 'BIO PAGE', path: '/dashboard/bio' },
+    { icon: Terminal, label: 'API & DEVS', path: '/dashboard/api' },
     { icon: Settings, label: 'SETTINGS', path: '/profile' },
   ]
 
