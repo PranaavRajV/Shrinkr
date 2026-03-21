@@ -15,6 +15,7 @@ interface AuthContextType {
   token: string | null
   login: (email: string, password: string) => Promise<void>
   register: (email: string, password: string) => Promise<void>
+  googleLogin: (idToken: string) => Promise<void>
   logout: () => void
   refreshProfile: () => Promise<void>
   isLoading: boolean
@@ -77,6 +78,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(userData)
   }
 
+  const googleLogin = async (idToken: string) => {
+    const res = await api.post('/api/auth/google', { idToken })
+    const { accessToken, user: userData } = res.data.data
+    localStorage.setItem('shrinkr_token', accessToken)
+    setToken(accessToken)
+    setUser(userData)
+  }
+
   const logout = () => {
     try {
       const refreshToken = localStorage.getItem('shrinkr_refresh')
@@ -108,7 +117,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider value={{
-      user, token, login, register, logout, refreshProfile, isLoading
+      user, token, login, register, googleLogin, logout, refreshProfile, isLoading
     }}>
       {children}
     </AuthContext.Provider>

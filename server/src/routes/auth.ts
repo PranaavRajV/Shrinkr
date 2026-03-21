@@ -132,12 +132,16 @@ router.post('/refresh', async (req: Request, res: Response, next) => {
 
     const secret = process.env.JWT_REFRESH_SECRET || 'refresh-secret'
     
-    // 1. Blacklist Check
-    const tokenHash = createHash('sha256').update(token).digest('hex')
-    const redis = await getRedisClient()
-    const blacklisted = await redis.get(`refresh:blacklist:${tokenHash}`)
-    if (blacklisted) {
-      return fail(res, 401, 'Token has been revoked', 'TOKEN_REVOKED')
+    // 1. Blacklist Check (Redis optional - skip if unavailable)
+    try {
+      const tokenHash = createHash('sha256').update(token).digest('hex')
+      const redis = await getRedisClient()
+      const blacklisted = await redis.get(`refresh:blacklist:${tokenHash}`)
+      if (blacklisted) {
+        return fail(res, 401, 'Token has been revoked', 'TOKEN_REVOKED')
+      }
+    } catch (_redisErr) {
+      console.warn('[Refresh] Redis unavailable, skipping blacklist check')
     }
 
     // 2. JWT Verify
@@ -151,6 +155,63 @@ router.post('/refresh', async (req: Request, res: Response, next) => {
       }
       return fail(res, 401, 'Invalid refresh token', 'INVALID_TOKEN')
     }
+  } catch (err) {
+    next(err)
+  }
+})
+
+import { OAuth2Client } from 'google-auth-library'
+
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID)
+
+/**
+ * @route POST /api/auth/google
+ */
+router.post('/google', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { idToken } = req.body
+    if (!idToken) return fail(res, 400, 'ID Token is required', 'TOKEN_REQUIRED')
+
+    const ticket = await googleClient.verifyIdToken({
+      idToken,
+      audience: process.env.GOOGLE_CLIENT_ID
+    })
+
+    const payload = ticket.getPayload()
+    if (!payload || !payload.email) {
+      return fail(res, 400, 'Invalid ID Token', 'INVALID_TOKEN')
+    }
+
+    const { email, name, picture, sub: googleId } = payload
+    const normEmail = email.toLowerCase().trim()
+
+    let user = await User.findOne({ 
+      $or: [{ googleId }, { email: normEmail }] 
+    })
+
+    if (!user) {
+      user = await User.create({
+        email: normEmail,
+        googleId,
+        name: name || '',
+        avatar: picture || ''
+      })
+    } else if (!user.googleId) {
+      // Link existing email account to google
+      user.googleId = googleId
+      if (!user.name) user.name = name || ''
+      if (!user.avatar) user.avatar = picture || ''
+      await user.save()
+    }
+
+    const accessToken = signAccessToken(user._id.toString(), user.email)
+    const refreshToken = signRefreshToken(user._id.toString(), user.email)
+
+    return ok(res, {
+      user: { id: user._id.toString(), email: user.email, name: user.name, avatar: user.avatar },
+      accessToken,
+      refreshToken
+    }, 'Google login successful')
   } catch (err) {
     next(err)
   }

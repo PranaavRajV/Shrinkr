@@ -1,127 +1,197 @@
 import { useRef, useState } from 'react'
+import { motion } from 'framer-motion'
 import { QRCodeCanvas } from 'qrcode.react'
+import { Download, Copy, X, Check, ExternalLink } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 type QRModalProps = {
-  shortUrl: string   // the short code URL, e.g. http://localhost:4001/BBWK6vO
-  shortCode?: string // optional override label
+  shortUrl: string
   onClose: () => void
 }
 
 export default function QRModal({ shortUrl, onClose }: QRModalProps) {
-  // Direct ref to the underlying <canvas> element rendered by QRCodeCanvas
   const qrRef = useRef<HTMLCanvasElement>(null)
   const [downloading, setDownloading] = useState(false)
-
+  const [copied, setCopied] = useState(false)
   const code = shortUrl.split('/').pop() || 'qr'
 
-  // ── Download as proper padded PNG ────────────────────────────────────────
-  const downloadPNG = () => {
+  const downloadPNG = async () => {
+    const src = qrRef.current
+    if (!src) { toast.error('QR canvas not ready'); return }
     setDownloading(true)
     try {
-      const src = qrRef.current
-      if (!src) { toast.error('QR canvas not ready'); return }
-
-      const PAD  = 32
+      // Build a new canvas with padding + dark background
+      const PAD = 48
       const SIZE = src.width
-      const out  = document.createElement('canvas')
-      out.width  = SIZE + PAD * 2
-      out.height = SIZE + PAD * 2
+      const out = document.createElement('canvas')
+      out.width = SIZE + PAD * 2
+      out.height = SIZE + PAD * 2 + 60  // extra space for label at bottom
 
       const ctx = out.getContext('2d')!
-      // White background
-      ctx.fillStyle = '#FFFFFF'
+
+      // Dark background
+      ctx.fillStyle = '#0a0a0a'
       ctx.fillRect(0, 0, out.width, out.height)
-      // Paste the QR
+
+      // White QR tile
+      ctx.fillStyle = '#FFFFFF'
+      const corner = 16
+      const rx = PAD - 8, ry = PAD - 8, rw = SIZE + 16, rh = SIZE + 16
+      ctx.beginPath()
+      ctx.moveTo(rx + corner, ry)
+      ctx.lineTo(rx + rw - corner, ry)
+      ctx.quadraticCurveTo(rx + rw, ry, rx + rw, ry + corner)
+      ctx.lineTo(rx + rw, ry + rh - corner)
+      ctx.quadraticCurveTo(rx + rw, ry + rh, rx + rw - corner, ry + rh)
+      ctx.lineTo(rx + corner, ry + rh)
+      ctx.quadraticCurveTo(rx, ry + rh, rx, ry + rh - corner)
+      ctx.lineTo(rx, ry + corner)
+      ctx.quadraticCurveTo(rx, ry, rx + corner, ry)
+      ctx.closePath()
+      ctx.fill()
+
+      // Draw actual QR
       ctx.drawImage(src, PAD, PAD)
 
-      // Force download
-      out.toBlob(blob => {
-        if (!blob) { toast.error('Failed to generate PNG'); return }
-        const url  = URL.createObjectURL(blob)
-        const link = document.createElement('a')
-        link.href     = url
-        link.download = `zurl-qr-${code}.png`
-        document.body.appendChild(link)
-        link.click()
-        document.body.removeChild(link)
-        URL.revokeObjectURL(url)
-        toast.success('QR downloaded!')
-      }, 'image/png')
+      // Label at bottom
+      ctx.fillStyle = '#CBFF00'
+      ctx.font = 'bold 14px Inter, system-ui, sans-serif'
+      ctx.textAlign = 'center'
+      ctx.fillText(`zurl.app/${code}`, out.width / 2, out.height - 18)
+
+      // Download
+      await new Promise<void>((resolve, reject) => {
+        out.toBlob(blob => {
+          if (!blob) { reject(new Error('Blob generation failed')); return }
+          const url = URL.createObjectURL(blob)
+          const a = document.createElement('a')
+          a.href = url
+          a.download = `zurl-qr-${code}.png`
+          document.body.appendChild(a)
+          a.click()
+          document.body.removeChild(a)
+          setTimeout(() => URL.revokeObjectURL(url), 100)
+          resolve()
+        }, 'image/png', 1.0)
+      })
+
+      toast.success('QR CODE DOWNLOADED AS PNG ✓')
     } catch (e) {
-      toast.error('Download failed')
+      console.error(e)
+      toast.error('Download failed — try again')
     } finally {
       setDownloading(false)
     }
   }
 
-  // ── Copy the short link ───────────────────────────────────────────────────
-  const copyLink = () => {
-    navigator.clipboard.writeText(shortUrl)
-      .then(() => toast.success('Link copied!'))
-      .catch(() => toast.error('Copy failed'))
+  const copyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(shortUrl)
+      setCopied(true)
+      toast.success('LINK COPIED!')
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      toast.error('COPY FAILED')
+    }
   }
 
   return (
     <div
       onClick={onClose}
       style={{
-        position: 'fixed', inset: 0, zIndex: 200,
-        background: 'rgba(0,0,0,0.90)',
-        backdropFilter: 'blur(8px)',
+        position: 'fixed', inset: 0, zIndex: 1000,
+        background: 'rgba(0,0,0,0.88)',
+        backdropFilter: 'blur(16px)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         padding: '24px',
-        fontFamily: 'Space Grotesk, sans-serif',
       }}
     >
-      <div
+      <motion.div
         onClick={e => e.stopPropagation()}
+        initial={{ scale: 0.95, opacity: 0, y: 16 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        exit={{ scale: 0.95, opacity: 0 }}
+        transition={{ type: 'spring', stiffness: 340, damping: 28 }}
         style={{
-          background: '#09090B',
-          border: '2px solid #3F3F46',
-          width: '100%', maxWidth: '360px',
-          padding: '36px 32px 28px',
+          background: '#111',
+          borderRadius: '20px',
+          border: '1px solid #1a1a1a',
+          width: '100%', maxWidth: '380px',
+          padding: '36px 28px 28px',
           display: 'flex', flexDirection: 'column', alignItems: 'center',
           position: 'relative',
+          boxShadow: '0 40px 80px rgba(0,0,0,0.8)',
         }}
       >
         {/* Close */}
-        <button onClick={onClose} style={{
-          position: 'absolute', top: '14px', right: '16px',
-          background: 'transparent', border: 'none',
-          color: '#555', cursor: 'pointer', fontSize: '22px', lineHeight: 1,
-        }}>×</button>
+        <button
+          onClick={onClose}
+          style={{
+            position: 'absolute', top: '16px', right: '16px',
+            background: 'none', border: '1px solid #222', borderRadius: '8px',
+            padding: '6px', color: '#555', cursor: 'pointer', display: 'flex'
+          }}
+        >
+          <X size={15} />
+        </button>
 
-        {/* Tag */}
-        <div style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.3em', color: '#555', marginBottom: '6px' }}>
-          QR CODE
+        {/* Label */}
+        <div style={{ fontSize: '10px', fontWeight: 800, color: '#CBFF00', letterSpacing: '0.2em', marginBottom: '6px' }}>
+          SECURE QR CODE
         </div>
-
-        {/* Short code */}
-        <div style={{ fontSize: '22px', fontWeight: 900, color: '#DFE104', letterSpacing: '-0.03em', textTransform: 'uppercase', marginBottom: '24px' }}>
+        <div style={{ fontSize: '26px', fontWeight: 900, color: '#fff', marginBottom: '28px', letterSpacing: '-0.03em' }}>
           /{code}
         </div>
 
-        {/* QR — ref directly on canvas */}
-        <div style={{ background: '#fff', padding: '16px', border: '4px solid #DFE104', marginBottom: '20px' }}>
+        {/* QR Container — white tile on dark background */}
+        <div style={{
+          background: '#fff',
+          padding: '20px',
+          borderRadius: '16px',
+          boxShadow: '0 0 0 1px rgba(255,255,255,0.05), 0 8px 32px rgba(0,0,0,0.4)',
+          marginBottom: '24px',
+          position: 'relative',
+        }}>
+          {/* Corner accents */}
+          {[
+            { top: '-2px', left: '-2px', borderTop: '3px solid #CBFF00', borderLeft: '3px solid #CBFF00' },
+            { top: '-2px', right: '-2px', borderTop: '3px solid #CBFF00', borderRight: '3px solid #CBFF00' },
+            { bottom: '-2px', left: '-2px', borderBottom: '3px solid #CBFF00', borderLeft: '3px solid #CBFF00' },
+            { bottom: '-2px', right: '-2px', borderBottom: '3px solid #CBFF00', borderRight: '3px solid #CBFF00' },
+          ].map((s, i) => (
+            <div key={i} style={{ position: 'absolute', width: '16px', height: '16px', borderRadius: '2px', ...s }} />
+          ))}
           <QRCodeCanvas
             ref={qrRef}
             value={shortUrl}
             size={200}
             level="H"
             includeMargin={false}
+            fgColor="#000000"
+            bgColor="#FFFFFF"
           />
         </div>
 
-        {/* Short URL label */}
+        {/* URL label */}
         <div style={{
-          fontSize: '10px', color: '#555', marginBottom: '24px',
-          maxWidth: '260px', textAlign: 'center',
-          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-          letterSpacing: '0.02em',
+          fontSize: '11px', color: '#444', marginBottom: '24px',
+          textAlign: 'center', maxWidth: '280px',
+          wordBreak: 'break-all', lineHeight: 1.5
         }}>
           {shortUrl}
         </div>
+
+        {/* Open link */}
+        <a
+          href={shortUrl} target="_blank" rel="noreferrer"
+          style={{
+            fontSize: '11px', color: '#555', marginBottom: '20px',
+            display: 'flex', alignItems: 'center', gap: '4px', textDecoration: 'none',
+            fontWeight: 700
+          }}
+        >
+          <ExternalLink size={12} /> Test this link
+        </a>
 
         {/* Buttons */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '100%' }}>
@@ -129,46 +199,40 @@ export default function QRModal({ shortUrl, onClose }: QRModalProps) {
             onClick={downloadPNG}
             disabled={downloading}
             style={{
-              height: '48px', width: '100%',
-              background: downloading ? '#a0a800' : '#DFE104',
-              border: 'none', color: '#000',
-              fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700,
-              fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.1em',
+              height: '52px', width: '100%',
+              background: downloading ? '#1a1a1a' : '#CBFF00',
+              border: 'none',
+              color: downloading ? '#444' : '#000',
+              fontWeight: 900, fontSize: '13px', textTransform: 'uppercase',
               cursor: downloading ? 'wait' : 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-              transition: 'background 150ms',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
+              borderRadius: '12px', letterSpacing: '0.06em',
+              transition: 'all 0.2s',
             }}
           >
-            {/* Download icon */}
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="butt" strokeLinejoin="miter">
-              <line x1="12" y1="3" x2="12" y2="16"/><polyline points="7 11 12 16 17 11"/><line x1="5" y1="21" x2="19" y2="21"/>
-            </svg>
-            {downloading ? 'Generating...' : 'Download PNG'}
+            <Download size={17} />
+            {downloading ? 'GENERATING...' : 'DOWNLOAD PNG'}
           </button>
 
           <button
             onClick={copyLink}
             style={{
-              height: '48px', width: '100%',
-              background: 'transparent', border: '1px solid #3F3F46',
-              color: '#A1A1AA',
-              fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700,
-              fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.1em',
+              height: '52px', width: '100%',
+              background: copied ? 'rgba(203,255,0,0.1)' : '#1a1a1a',
+              border: `1px solid ${copied ? 'rgba(203,255,0,0.3)' : '#222'}`,
+              color: copied ? '#CBFF00' : '#aaa',
+              fontWeight: 800, fontSize: '13px', textTransform: 'uppercase',
               cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
+              borderRadius: '12px',
+              transition: 'all 0.2s',
             }}
           >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <rect x="9" y="9" width="13" height="13"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
-            </svg>
-            Copy Link
+            {copied ? <Check size={17} /> : <Copy size={17} />}
+            {copied ? 'COPIED!' : 'COPY LINK'}
           </button>
         </div>
-
-        <div style={{ marginTop: '18px', fontSize: '9px', fontWeight: 700, letterSpacing: '0.2em', color: '#27272A' }}>
-          POINT CAMERA TO SCAN · ZURL
-        </div>
-      </div>
+      </motion.div>
     </div>
   )
 }

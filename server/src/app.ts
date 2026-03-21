@@ -5,6 +5,7 @@ import helmet from 'helmet'
 import mongoose from 'mongoose'
 import responseTime from 'response-time'
 import { ZodError } from 'zod'
+import path from 'path'
 
 import { getRedisClient } from './config/redis'
 import { Click } from './models/Click'
@@ -22,23 +23,32 @@ const app = express()
 
 // 1. Request Logger Middleware
 app.use((req, res, next) => {
-  const start = Date.now()
-  res.on('finish', () => {
-    const elapsed = Date.now() - start
-    const color = res.statusCode < 400 ? '\x1b[32m' : '\x1b[31m'
-    console.log(`${color}${req.method}\x1b[0m ${req.path} ${res.statusCode} ${elapsed}ms`)
-  })
+  if (req.path.startsWith('/api') || req.path.length <= 10) {
+    const start = Date.now()
+    res.on('finish', () => {
+      const elapsed = Date.now() - start
+      const color = res.statusCode < 400 ? '\x1b[32m' : '\x1b[31m'
+      console.log(`${color}${req.method}\x1b[0m ${req.path} ${res.statusCode} ${elapsed}ms`)
+    })
+  }
   next()
 })
 
 // 2. Security & Optimization
-app.use(helmet())
+app.use(helmet({
+  contentSecurityPolicy: false, // Disabled for Render/External assets compatibility
+  crossOriginResourcePolicy: false
+}))
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:5173',
+  origin: true, // Allow all origins in production for simpler redirection
   credentials: true
 }))
 app.use(express.json({ limit: '5mb' }))
 app.use(responseTime())
+
+// Static files for client build
+const clientPath = path.join(__dirname, '../../client/dist')
+app.use(express.static(clientPath))
 
 // 3. API Routes
 app.use('/api/auth', authRoutes)
@@ -48,16 +58,20 @@ app.use('/api/users', userRoutes)
 
 // 4. Root & Health
 app.get('/health', (_req, res) => res.json({ success: true, message: 'Shrinkr API Running' }))
-app.get('/', (_req, res) => res.json({ success: true, message: 'Shrinkr API Running' }))
 
 // 5. Redirect Route (Hardened)
 app.get('/:shortCode', async (req, res, next) => {
   try {
     const { shortCode } = req.params
 
+    // If it looks like a file extension or an asset, don't try to redirect
+    if (shortCode.includes('.') || ['assets', 'vite', 'favicon'].includes(shortCode)) {
+      return next()
+    }
+
     // 0. Validate format BEFORE DB lookup
     if (!/^[a-zA-Z0-9_-]{3,30}$/.test(shortCode)) {
-      return res.status(400).send(renderErrorPage(400, 'Invalid short code format', 'INVALID_SHORT_CODE'))
+      return next() // Pass to frontend static or 404
     }
 
     // 1. Redis Cache Check
@@ -67,7 +81,7 @@ app.get('/:shortCode', async (req, res, next) => {
       if (cachedUrl) {
         console.log('cache:hit', shortCode)
         updateAnalytics(shortCode, req)
-        return res.redirect(301, cachedUrl)
+        return res.redirect(302, cachedUrl)
       }
     } catch (e) {
       console.warn('Redis error:', e)
@@ -81,10 +95,8 @@ app.get('/:shortCode', async (req, res, next) => {
     })
 
     if (!url || !url.isActive) {
-      const code = !url ? 'URL_NOT_FOUND' : 'URL_INACTIVE'
-      const status = !url ? 404 : 410
-      const msg = !url ? 'Link not found' : 'The link you are looking for is no longer active'
-      return res.status(status).send(renderErrorPage(status, msg, code))
+      if (!url) return next() // Not a shortcode, pass to frontend
+      return res.status(410).send(renderErrorPage(410, 'The link you are looking for is no longer active', 'URL_INACTIVE'))
     }
 
     // 3. Expiry Check
@@ -100,13 +112,13 @@ app.get('/:shortCode', async (req, res, next) => {
     // 5. Track Click (fire-and-forget)
     updateAnalytics(shortCode, req, url._id.toString())
 
-    return res.redirect(301, url.originalUrl)
+    return res.redirect(302, url.originalUrl)
   } catch (err) {
     next(err)
   }
 })
 
-// 5. Analytics Tracker (Non-blocking)
+// Analytics Tracker (Non-blocking)
 function updateAnalytics(shortCode: string, req: express.Request, urlId?: string) {
   setImmediate(async () => {
     try {
@@ -136,26 +148,31 @@ function updateAnalytics(shortCode: string, req: express.Request, urlId?: string
   })
 }
 
-// 6. 404 Handler
-app.use((req, res) => {
-  fail(res, 404, `Route ${req.method} ${req.path} not found`, 'ROUTE_NOT_FOUND')
+// 6. SPA Catch-all (Redirect all other routes to frontend)
+app.get('*', (req, res) => {
+  res.sendFile(path.join(clientPath, 'index.html'))
 })
 
 // 8. Global Error Handler
 app.use((err: any, req: express.Request, res: express.Response, _next: express.NextFunction) => {
-  console.error(`[ERROR] ${req.method} ${req.path}:`, err.message)
-  
-  if (err instanceof ZodError) {
-    const firstError = err.issues[0]
-    return fail(res, 400, firstError.message, 'VALIDATION_ERROR', firstError.path[0] as string)
+  if (req.path.startsWith('/api')) {
+    console.error(`[ERROR] ${req.method} ${req.path}:`, err.message)
+    
+    if (err instanceof ZodError) {
+      const firstError = err.issues[0]
+      return fail(res, 400, firstError.message, 'VALIDATION_ERROR', firstError.path[0] as string)
+    }
+
+    if (err.name === 'ValidationError') return fail(res, 400, err.message, 'VALIDATION_ERROR')
+    if (err.name === 'CastError') return fail(res, 400, 'Invalid ID format', 'INVALID_ID')
+    if (err.code === 11000) return fail(res, 409, 'Duplicate entry found', 'DUPLICATE')
+
+    const status = err.status || err.statusCode || 500
+    return fail(res, status, err.message || 'Internal server error', err.code || 'SERVER_ERROR')
   }
-
-  if (err.name === 'ValidationError') return fail(res, 400, err.message, 'VALIDATION_ERROR')
-  if (err.name === 'CastError') return fail(res, 400, 'Invalid ID format', 'INVALID_ID')
-  if (err.code === 11000) return fail(res, 409, 'Duplicate entry found', 'DUPLICATE')
-
-  const status = err.status || err.statusCode || 500
-  return fail(res, status, err.message || 'Internal server error', err.code || 'SERVER_ERROR')
+  
+  // For non-API routes, show a generic error page
+  res.status(500).send(renderErrorPage(500, 'Something went wrong while processing your request', 'INTERNAL_SERVER_ERROR'))
 })
 
 // DB Connection

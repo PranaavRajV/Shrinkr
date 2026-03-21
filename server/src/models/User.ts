@@ -6,7 +6,8 @@ export type UserId = Types.ObjectId
 
 export interface UserAttrs {
   email: string
-  passwordHash: string
+  passwordHash?: string
+  googleId?: string
   name?: string
   avatar?: string   // base64 data URL or external URL
   bio?: string
@@ -38,7 +39,13 @@ const UserSchema = new Schema<UserDocument, UserModel, UserMethods>(
     },
     passwordHash: {
       type: String,
-      required: true,
+      required: false,
+    },
+    googleId: {
+      type: String,
+      unique: true,
+      sparse: true,
+      index: true,
     },
     name: {
       type: String,
@@ -62,7 +69,7 @@ const UserSchema = new Schema<UserDocument, UserModel, UserMethods>(
 
 // Hash plaintext passwords before saving.
 UserSchema.pre('save', async function (this: UserDocument) {
-  if (!this.isModified('passwordHash')) return
+  if (!this.passwordHash || !this.isModified('passwordHash')) return
   const rounds = process.env.BCRYPT_SALT_ROUNDS
     ? Number(process.env.BCRYPT_SALT_ROUNDS)
     : 12
@@ -73,6 +80,7 @@ UserSchema.methods.comparePassword = async function (
   this: UserDocument,
   plain: string,
 ): Promise<boolean> {
+  if (!this.passwordHash) return false
   return bcrypt.compare(plain, this.passwordHash)
 }
 

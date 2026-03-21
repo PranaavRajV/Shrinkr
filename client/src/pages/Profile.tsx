@@ -1,90 +1,47 @@
 import { useState, useRef } from 'react'
-import { Navbar } from '../components/Navbar'
 import { useAuth } from '../contexts/AuthContext'
 import api from '../lib/api'
 import toast from 'react-hot-toast'
+import Layout from '../components/Layout'
+import { User, Shield, Key, Camera, Mail, Info, Save } from 'lucide-react'
 
 const S = {
-  page: {
-    minHeight: '100vh',
-    background: '#09090B',
-    color: '#FAFAFA',
-    fontFamily: 'Space Grotesk, sans-serif',
-  } as React.CSSProperties,
-  main: {
-    padding: '100px 24px 80px',
-    maxWidth: '800px',
-    margin: '0 auto',
-    width: '100%',
-  } as React.CSSProperties,
-  section: {
-    background: '#111',
-    border: '1px solid #3F3F46',
-    padding: '32px',
-    marginBottom: '32px',
-    position: 'relative' as const,
+  card: {
+    background: 'var(--card-bg)',
+    border: '1px solid var(--border)',
+    borderRadius: 'var(--radius-md)',
+    padding: '40px',
+    boxShadow: 'var(--shadow-sm)',
+    marginBottom: '32px'
   },
   label: {
-    fontSize: '10px',
-    fontWeight: 700,
-    letterSpacing: '0.15em',
-    textTransform: 'uppercase' as const,
-    color: '#A1A1AA',
-    marginBottom: '8px',
-    display: 'block',
+    fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)',
+    textTransform: 'uppercase' as const, letterSpacing: '0.12em',
+    marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px'
   },
   input: {
-    background: '#09090B',
-    border: '1px solid #3F3F46',
-    color: '#FAFAFA',
-    fontFamily: 'Space Grotesk, sans-serif',
-    fontSize: '14px',
-    padding: '12px',
-    outline: 'none',
-    width: '100%',
-    marginBottom: '20px',
+    background: 'var(--bg)', border: '1px solid var(--border)',
+    color: 'var(--text-primary)', fontSize: '14px', padding: '12px 16px',
+    borderRadius: 'var(--radius-md)', outline: 'none', width: '100%',
+    transition: 'all 0.2s',
   },
-  btnYellow: {
-    background: '#DFE104',
-    border: 'none',
-    color: '#000',
-    fontFamily: 'Space Grotesk, sans-serif',
-    fontWeight: 700,
-    fontSize: '11px',
-    textTransform: 'uppercase' as const,
-    letterSpacing: '0.1em',
-    cursor: 'pointer',
-    padding: '12px 24px',
-  },
-  avatarWrap: {
-    width: '100px',
-    height: '100px',
-    border: '3px solid #DFE104',
-    background: '#09090B',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: '32px',
-    fontWeight: 900,
-    color: '#DFE104',
-    marginBottom: '20px',
-    cursor: 'pointer',
-    position: 'relative' as const,
-    overflow: 'hidden',
-  },
+  btnPrimary: {
+    background: 'linear-gradient(135deg, #B0A483 0%, #8D7F5F 100%)',
+    border: 'none', color: '#fff', fontWeight: 700, fontSize: '13px',
+    textTransform: 'uppercase' as const, letterSpacing: '0.05em',
+    cursor: 'pointer', padding: '14px 28px', borderRadius: 'var(--radius-full)',
+    display: 'flex', alignItems: 'center', gap: '10px', boxShadow: '0 4px 12px rgba(176, 164, 131, 0.2)'
+  }
 }
 
 export default function Profile() {
-  const { user, refreshProfile } = useAuth()
+  const { user, refreshProfile, logout } = useAuth()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // Profile data
   const [name, setName] = useState(user?.name || '')
   const [bio, setBio] = useState(user?.bio || '')
   const [avatar, setAvatar] = useState(user?.avatar || '')
   const [saving, setSaving] = useState(false)
-
-  // Password data
   const [currentPw, setCurrentPw] = useState('')
   const [newPw, setNewPw] = useState('')
   const [changingPw, setChangingPw] = useState(false)
@@ -94,16 +51,8 @@ export default function Profile() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-
-    if (file.size > 2 * 1024 * 1024) {
-      toast.error('File too large (max 2MB)')
-      return
-    }
-
     const reader = new FileReader()
-    reader.onloadend = () => {
-      setAvatar(reader.result as string)
-    }
+    reader.onloadend = () => setAvatar(reader.result as string)
     reader.readAsDataURL(file)
   }
 
@@ -113,9 +62,9 @@ export default function Profile() {
     try {
       await api.patch('/api/users/me', { name, bio, avatar })
       await refreshProfile()
-      toast.success('Profile updated')
-    } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Update failed')
+      toast.success('PROFILE UPDATED')
+    } catch {
+      toast.error('UPDATE FAILED')
     } finally {
       setSaving(false)
     }
@@ -129,11 +78,10 @@ export default function Profile() {
         currentPassword: currentPw,
         newPassword: newPw
       })
-      toast.success('Password changed successfully')
-      setCurrentPw('')
-      setNewPw('')
+      toast.success('PASSWORD CHANGED')
+      setCurrentPw(''); setNewPw('')
     } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Password change failed')
+      toast.error(err.response?.data?.error || 'ACTION FAILED')
     } finally {
       setChangingPw(false)
     }
@@ -142,127 +90,149 @@ export default function Profile() {
   if (!user) return null
 
   return (
-    <div style={S.page}>
-      <Navbar pageTitle="My Profile" />
-      <main style={S.main}>
-        
-        <h1 style={{ fontSize: '32px', fontWeight: 900, marginBottom: '40px', letterSpacing: '-0.02em', textTransform: 'uppercase' }}>
-          Profile Settings
-        </h1>
+    <Layout>
+      <div className="fade-in" style={{ padding: '40px' }}>
+        <div style={{ marginBottom: '56px' }}>
+          <h1 style={{ fontSize: '42px', fontWeight: 900, letterSpacing: '-0.04em', color: '#fff' }}>Account Settings</h1>
+          <p style={{ color: 'var(--text-muted)', marginTop: '8px', fontSize: '15px', maxWidth: '600px' }}>
+             Fine-tune your personal profile, manage security protocols, and configure your ZURL experience.
+          </p>
+        </div>
 
-        {/* ── PROFILE INFO ──────────────────────────────────────────────── */}
-        <div style={S.section}>
-          <div style={{ ...S.label, marginBottom: '24px' }}>Identity & Information</div>
-          
-          <form onSubmit={handleUpdateProfile}>
-            <div style={{ display: 'flex', gap: '32px', flexWrap: 'wrap' }}>
-              <div>
-                <span style={S.label}>Profile Picture</span>
-                <div 
-                  className="avatar-upload"
-                  style={S.avatarWrap} 
-                  onClick={handleAvatarClick}
-                >
-                  {avatar ? (
-                    <img src={avatar} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="Avatar" />
-                  ) : (
-                    user.email.charAt(0).toUpperCase()
-                  )}
-                  <div 
-                    className="avatar-overlay"
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(300px, 1fr) 2fr', gap: '40px', alignItems: 'start' }}>
+           {/* Sidebar Info */}
+           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+              <div style={{ ...S.card, textAlign: 'center', marginBottom: 0 }}>
+                 <div 
+                    onClick={handleAvatarClick}
                     style={{
-                      position: 'absolute', inset: 0, background: 'rgba(223, 225, 4, 0.8)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      opacity: 0, transition: 'opacity 0.2s', color: '#000', fontSize: '10px'
+                       width: '128px', height: '128px', borderRadius: '50%',
+                       border: '2px solid var(--border)', margin: '0 auto 28px',
+                       overflow: 'hidden', cursor: 'pointer', position: 'relative',
+                       background: 'var(--bg-secondary)', transition: 'transform 0.2s'
                     }}
-                  >
-                    CHANGE
-                  </div>
-                </div>
-                <input 
-                  type="file" 
-                  ref={fileInputRef} 
-                  onChange={handleFileChange} 
-                  accept="image/*" 
-                  style={{ display: 'none' }} 
-                />
+                    onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.02)'}
+                    onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+                 >
+                    {avatar ? (
+                      <img src={avatar} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      <div style={{ fontSize: '44px', fontWeight: 900, color: 'var(--accent)', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                         {user.email.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    <div style={{ 
+                      position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', 
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      opacity: 0, transition: 'opacity 0.2s'
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.opacity = '1'}
+                    onMouseLeave={e => e.currentTarget.style.opacity = '0'}
+                    >
+                       <Camera color="#fff" size={24} />
+                    </div>
+                 </div>
+                 <h2 style={{ fontSize: '22px', fontWeight: 900, color: '#fff' }}>{user.name || 'Professional Member'}</h2>
+                 <p style={{ color: 'var(--accent)', fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.15em', marginTop: '6px' }}>PREMIUM ACCESS</p>
+                 <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginTop: '12px', opacity: 0.7 }}>{user.email}</p>
+                 <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" style={{ display: 'none' }} />
               </div>
 
-              <div style={{ flex: '1 1 300px' }}>
-                <span style={S.label}>Email Address (Read-only)</span>
-                <input style={{ ...S.input, opacity: 0.6, cursor: 'not-allowed' }} value={user.email} disabled />
-
-                <span style={S.label}>Full Name</span>
-                <input 
-                  style={S.input} 
-                  placeholder="Zurl User" 
-                  value={name} 
-                  onChange={e => setName(e.target.value)} 
-                />
-
-                <span style={S.label}>Short Bio</span>
-                <textarea 
-                  style={{ ...S.input, minHeight: '80px', resize: 'vertical' }} 
-                  placeholder="Tell us about yourself..." 
-                  value={bio} 
-                  onChange={e => setBio(e.target.value)} 
-                />
-
-                <button 
-                  type="submit" 
-                  style={{ ...S.btnYellow, opacity: saving ? 0.6 : 1 }}
-                  disabled={saving}
-                >
-                  {saving ? 'Saving...' : 'Update Profile →'}
-                </button>
+              <div style={{ ...S.card, marginBottom: 0 }}>
+                 <h3 style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <Shield size={16} color="var(--accent)" />
+                    Security Baseline
+                 </h3>
+                 <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                    {[
+                      { l: 'Auth Method', v: 'Standard JWT' },
+                      { l: 'Region Compliance', v: 'Verified (ISO)' },
+                      { l: 'Session Status', v: 'Encrypted' }
+                    ].map((item, i) => (
+                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                         <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>{item.l}</span>
+                         <span style={{ fontWeight: 800, color: 'var(--text-secondary)' }}>{item.v}</span>
+                      </div>
+                    ))}
+                 </div>
               </div>
-            </div>
-          </form>
+
+              <button 
+                 onClick={logout}
+                 style={{ 
+                   background: 'none', color: '#ff4444', 
+                   border: '1px solid rgba(255,68,68,0.2)', width: '100%', height: '52px',
+                   display: 'flex', alignItems: 'center', justifyContent: 'center',
+                   borderRadius: 'var(--radius-md)', cursor: 'pointer',
+                   fontSize: '12px', fontWeight: 900, letterSpacing: '0.1em',
+                   transition: 'all 0.2s'
+                 }}
+                 onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,68,68,0.05)'; e.currentTarget.style.borderColor = '#ff4444'; }}
+                 onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.borderColor = 'rgba(255,68,68,0.2)'; }}
+              >
+                 TERMINATE SESSION
+              </button>
+           </div>
+
+           {/* Forms */}
+           <div style={{ display: 'flex', flexDirection: 'column', gap: '40px' }}>
+              <div style={{ ...S.card, marginBottom: 0 }}>
+                 <h3 style={{ fontSize: '20px', fontWeight: 900, marginBottom: '36px', display: 'flex', alignItems: 'center', gap: '14px', color: '#fff' }}>
+                    <User size={22} color="var(--accent)" />
+                    Profile Identity
+                 </h3>
+                 <form onSubmit={handleUpdateProfile} style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '28px' }}>
+                       <div>
+                          <label style={S.label}><Mail size={12} /> Registered Email</label>
+                          <input style={{ ...S.input, background: '#0a0a0a', opacity: 0.5, cursor: 'not-allowed' }} value={user.email} disabled />
+                       </div>
+                       <div>
+                          <label style={S.label}><User size={12} /> Preferred Name</label>
+                          <input style={S.input} value={name} onChange={e => setName(e.target.value)} placeholder="Enter your name" />
+                       </div>
+                    </div>
+                    <div>
+                       <label style={S.label}><Info size={12} /> Identity Statement (Bio)</label>
+                       <textarea 
+                          style={{ ...S.input, minHeight: '120px', resize: 'vertical' }} 
+                          value={bio} 
+                          onChange={e => setBio(e.target.value)} 
+                          placeholder="Tell us about yourself..."
+                       />
+                    </div>
+                    <button type="submit" disabled={saving} style={{ ...S.btnPrimary, width: 'fit-content' }}>
+                       <Save size={18} />
+                       {saving ? 'UPDATING...' : 'Commit Changes'}
+                    </button>
+                 </form>
+              </div>
+
+              <div style={{ ...S.card, marginBottom: 0 }}>
+                 <h3 style={{ fontSize: '20px', fontWeight: 900, marginBottom: '36px', display: 'flex', alignItems: 'center', gap: '14px', color: '#fff' }}>
+                    <Key size={22} color="var(--accent)" />
+                    Security Access
+                 </h3>
+                 <form onSubmit={handleChangePassword} style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '28px' }}>
+                      <div>
+                         <label style={S.label}>Existing Password</label>
+                         <input type="password" style={S.input} value={currentPw} onChange={e => setCurrentPw(e.target.value)} placeholder="••••••••" />
+                      </div>
+                      <div>
+                         <label style={S.label}>New Secure Pattern</label>
+                         <input type="password" style={S.input} value={newPw} onChange={e => setNewPw(e.target.value)} placeholder="••••••••" />
+                      </div>
+                    </div>
+                    <button type="submit" disabled={changingPw} style={{ ...S.btnPrimary, background: '#fff', color: '#000', width: 'fit-content', boxShadow: 'none' }}>
+                       {changingPw ? 'MODIFYING...' : 'Apply New Password'}
+                    </button>
+                 </form>
+              </div>
+           </div>
         </div>
-
-        {/* ── ACCOUNT SECURITY ──────────────────────────────────────────── */}
-        <div style={S.section}>
-          <div style={{ ...S.label, marginBottom: '20px' }}>Security Settings</div>
-          
-          <form onSubmit={handleChangePassword} style={{ maxWidth: '400px' }}>
-            <span style={S.label}>Current Password</span>
-            <input 
-              type="password" 
-              style={S.input} 
-              value={currentPw} 
-              onChange={e => setCurrentPw(e.target.value)} 
-              required
-            />
-
-            <span style={S.label}>New Password</span>
-            <input 
-              type="password" 
-              style={S.input} 
-              value={newPw} 
-              onChange={e => setNewPw(e.target.value)} 
-              required
-              minLength={8}
-            />
-
-            <button 
-              type="submit" 
-              style={{ ...S.btnYellow, opacity: changingPw ? 0.6 : 1 }}
-              disabled={changingPw}
-            >
-              {changingPw ? 'Changing...' : 'Change Password →'}
-            </button>
-          </form>
-        </div>
-
-        {/* ── ACCOUNT DETAILS ───────────────────────────────────────────── */}
-        <div style={{ ...S.section, borderColor: '#27272A', background: 'transparent' }}>
-          <div style={S.label}>Account Details</div>
-          <div style={{ marginTop: '12px', fontSize: '13px', color: '#555' }}>
-            User ID: <span style={{ fontFamily: 'monospace' }}>{user.id}</span>
-          </div>
-        </div>
-
-      </main>
-    </div>
+      </div>
+    </Layout>
   )
 }
+

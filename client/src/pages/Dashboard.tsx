@@ -1,631 +1,359 @@
-import { useState, useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { Navbar } from '../components/Navbar'
+import { useState, useEffect, useCallback } from 'react'
+import { AnimatePresence } from 'framer-motion'
+import { 
+  Link2, MousePointer2, Plus, Copy, Trash2,
+  Filter, BarChart2, Check,
+  TrendingUp, Star, ExternalLink, AlertCircle
+} from 'lucide-react'
 import api from '../lib/api'
 import toast from 'react-hot-toast'
+import Layout from '../components/Layout'
+import BulkUpload from '../components/BulkUpload'
 import QRModal from '../components/QRModal'
+import CreateLinkModal from '../components/CreateLinkModal'
+import { useNotifications } from '../contexts/NotificationContext'
+import { format } from 'date-fns'
+import { Link } from 'react-router-dom'
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-interface UrlItem {
-  id: string
-  shortCode: string
-  originalUrl: string
-  shortUrl: string
-  totalClicks: number
-  createdAt: string
-  expiresAt?: string
-  isActive: boolean
-}
-
-// ─── Inline styles ────────────────────────────────────────────────────────────
-const S = {
-  page: {
-    minHeight: '100vh',
-    background: '#09090B',
-    color: '#FAFAFA',
-    fontFamily: 'Space Grotesk, sans-serif',
-  } as React.CSSProperties,
-  main: {
-    padding: '72px 24px 80px',
-    maxWidth: '1200px',
-    margin: '0 auto',
-    width: '100%',
-  } as React.CSSProperties,
-  label: {
-    fontSize: '10px',
-    fontWeight: 700,
-    letterSpacing: '0.15em',
-    textTransform: 'uppercase' as const,
-    color: '#A1A1AA',
-  },
-  input: {
-    background: '#111',
-    border: '1px solid #3F3F46',
-    color: '#FAFAFA',
-    fontFamily: 'Space Grotesk, sans-serif',
-    fontSize: '14px',
-    padding: '10px 12px',
-    outline: 'none',
-    width: '100%',
-    boxSizing: 'border-box' as const,
-  },
-  btnYellow: {
-    background: '#DFE104',
-    border: 'none',
-    color: '#000',
-    fontFamily: 'Space Grotesk, sans-serif',
-    fontWeight: 700,
-    fontSize: '11px',
-    textTransform: 'uppercase' as const,
-    letterSpacing: '0.1em',
-    cursor: 'pointer',
-    padding: '10px 20px',
-  },
-  btnGhost: {
-    background: 'transparent',
-    border: '1px solid #3F3F46',
-    color: '#A1A1AA',
-    fontFamily: 'Space Grotesk, sans-serif',
-    fontWeight: 700,
-    fontSize: '10px',
-    textTransform: 'uppercase' as const,
-    letterSpacing: '0.1em',
-    cursor: 'pointer',
-    padding: '7px 12px',
-  },
-  btnDanger: {
-    background: 'transparent',
-    border: '1px solid #ef4444',
-    color: '#ef4444',
-    fontFamily: 'Space Grotesk, sans-serif',
-    fontWeight: 700,
-    fontSize: '10px',
-    textTransform: 'uppercase' as const,
-    letterSpacing: '0.1em',
-    cursor: 'pointer',
-    padding: '7px 12px',
-  },
-}
-
-// ─── Dashboard ────────────────────────────────────────────────────────────────
 export default function Dashboard() {
-  const [urls, setUrls] = useState<UrlItem[]>([])
+  const [urls, setUrls] = useState<any[]>([])
+  const [stats, setStats] = useState({ totalLinks: 0, totalClicks: 0 })
   const [loading, setLoading] = useState(true)
-  const [search, setSearch] = useState('')
-  const [sort, setSort] = useState<'createdAt' | 'clicks' | 'expiry'>('createdAt')
-
-  // Create form
-  const [newUrl, setNewUrl] = useState('')
-  const [alias, setAlias] = useState('')
-  const [expiresAt, setExpiresAt] = useState('')
-  const [aliasAvail, setAliasAvail] = useState<null | boolean>(null)
-  const [aliasChecking, setAliasChecking] = useState(false)
-  const [creating, setCreating] = useState(false)
-  const [createError, setCreateError] = useState('')
-  const [showCreate, setShowCreate] = useState(false)
-
-  // Edit
-  const [editingId, setEditingId] = useState<string | null>(null)
-  const [editUrl, setEditUrl] = useState('')
-  const [editSaving, setEditSaving] = useState(false)
-
-  // QR
-  const [qrUrl, setQrUrl] = useState<string | null>(null)
-
-  // Bulk
   const [showBulk, setShowBulk] = useState(false)
-  const [bulkText, setBulkText] = useState('')
-  const [bulkLoading, setBulkLoading] = useState(false)
-  const [bulkResults, setBulkResults] = useState<any[] | null>(null)
+  const [showCreate, setShowCreate] = useState(false)
+  const [selectedQR, setSelectedQR] = useState<string | null>(null)
+  const [isMonthly, setIsMonthly] = useState(true)
+  const [copiedId, setCopiedId] = useState<string | null>(null)
+  const { addNotification } = useNotifications()
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
 
-  const aliasTimer = useRef<ReturnType<typeof setTimeout>>()
-  const navigate = useNavigate()
-
-  // ─── Fetch ─────────────────────────────────────────────────────────────────
-  const fetchUrls = async () => {
+  const fetchData = useCallback(async () => {
     try {
-      const res = await api.get(`/api/urls?sort=${sort === 'createdAt' ? 'createdAt' : sort}&limit=100`)
-      setUrls(res.data.data.urls)
+      const [uRes, sRes] = await Promise.all([
+        api.get('/api/urls'),
+        api.get('/api/users/me/stats')
+      ])
+      setUrls(uRes.data.data.urls || [])
+      setStats(sRes.data.data.stats || { totalLinks: 0, totalClicks: 0 })
     } catch {
-      toast.error('Failed to load links')
+      toast.error('Failed to load dashboard data')
     } finally {
       setLoading(false)
     }
+  }, [])
+
+  useEffect(() => { fetchData() }, [fetchData])
+
+  const handleCopy = async (shortUrl: string, id: string) => {
+    await navigator.clipboard.writeText(shortUrl)
+    setCopiedId(id)
+    toast.success('SHORT URL COPIED')
+    addNotification({ type: 'success', title: 'Link copied!', message: `${shortUrl} is in your clipboard.` })
+    setTimeout(() => setCopiedId(null), 2000)
   }
 
-  useEffect(() => { fetchUrls() }, [sort])
-
-  // ─── Alias check ───────────────────────────────────────────────────────────
-  const checkAlias = (val: string) => {
-    setAlias(val)
-    setAliasAvail(null)
-    clearTimeout(aliasTimer.current)
-    if (!val || val.length < 3) return
-    setAliasChecking(true)
-    aliasTimer.current = setTimeout(async () => {
-      try {
-        const res = await api.get(`/api/urls/check-alias?alias=${val}`)
-        setAliasAvail(res.data.data.available)
-      } catch { setAliasAvail(null) }
-      finally { setAliasChecking(false) }
-    }, 450)
-  }
-
-  // ─── Create ────────────────────────────────────────────────────────────────
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setCreateError('')
-    if (!newUrl) return
-    setCreating(true)
-    try {
-      await api.post('/api/urls', {
-        originalUrl: newUrl,
-        customAlias: alias || undefined,
-        expiresAt: expiresAt || undefined,
-      })
-      toast.success('Link created!')
-      setNewUrl(''); setAlias(''); setExpiresAt('')
-      setAliasAvail(null); setShowCreate(false)
-      fetchUrls()
-    } catch (err: any) {
-      const msg = err.response?.data?.error || 'Failed to create link'
-      setCreateError(msg)
-      toast.error(msg)
-    } finally {
-      setCreating(false)
-    }
-  }
-
-  // ─── Copy ──────────────────────────────────────────────────────────────────
-  const copy = (text: string, label = 'Link copied!') => {
-    navigator.clipboard.writeText(text).then(() => toast.success(label))
-  }
-
-  const [deleting, setDeleting] = useState<string | null>(null)
-  const [confirmDelete, setConfirmDelete] = useState<string | null>(null)  // shortCode awaiting confirmation
-
-  const handleDelete = async (shortCode: string) => {
-    setConfirmDelete(null)
-    setDeleting(shortCode)
+  const handleDelete = async (shortCode: string, id: string) => {
+    if (confirmDeleteId !== id) { setConfirmDeleteId(id); return }
+    setConfirmDeleteId(null)
+    setDeletingId(id)
     try {
       await api.delete(`/api/urls/${shortCode}`)
-      toast.success('Link deleted')
-      setUrls(prev => prev.filter(u => u.shortCode !== shortCode))
-    } catch (err: any) {
-      const msg = err.response?.data?.error || err.message || 'Failed to delete'
-      toast.error(msg)
-      console.error('DELETE error:', err.response?.data)
-    } finally {
-      setDeleting(null)
-    }
-  }
-
-  // ─── Edit save ─────────────────────────────────────────────────────────────
-  const saveEdit = async (shortCode: string) => {
-    if (!editUrl) return
-    setEditSaving(true)
-    try {
-      await api.patch(`/api/urls/${shortCode}`, { originalUrl: editUrl })
-      toast.success('Link updated!')
-      setEditingId(null)
-      fetchUrls()
-    } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Update failed')
-    } finally {
-      setEditSaving(false)
-    }
-  }
-
-  // ─── Bulk ──────────────────────────────────────────────────────────────────
-  const handleBulk = async () => {
-    const lines = bulkText.split('\n').map(l => l.trim()).filter(Boolean)
-    if (!lines.length) { toast.error('Paste at least one URL'); return }
-    setBulkLoading(true)
-    try {
-      const res = await api.post('/api/urls/bulk', {
-        urls: lines.map(u => ({ originalUrl: u }))
-      })
-      setBulkResults(res.data.data.results)
-      fetchUrls()
-      toast.success(`Processed ${lines.length} URLs`)
+      toast.success('LINK DELETED')
+      addNotification({ type: 'info', title: 'Link deleted', message: `Short link /${shortCode} was permanently removed.` })
+      setUrls(prev => prev.filter(u => u.id !== id))
+      setStats(prev => ({ ...prev, totalLinks: Math.max(0, prev.totalLinks - 1) }))
     } catch {
-      toast.error('Bulk upload failed')
+      toast.error('DELETE FAILED')
     } finally {
-      setBulkLoading(false)
+      setDeletingId(null)
     }
   }
 
-  // ─── Filter ────────────────────────────────────────────────────────────────
-  const filtered = urls.filter(u =>
-    u.originalUrl.toLowerCase().includes(search.toLowerCase()) ||
-    u.shortCode.toLowerCase().includes(search.toLowerCase())
-  )
+  const topLink = urls.length > 0
+    ? urls.reduce((prev, cur) => ((prev.totalClicks || 0) > (cur.totalClicks || 0) ? prev : cur))
+    : null
 
-  const totalClicks = urls.reduce((s, u) => s + u.totalClicks, 0)
+  const baseUrl = window.location.host
 
-
-  // ─── Render ────────────────────────────────────────────────────────────────
   return (
-    <div style={S.page}>
-      <Navbar />
-      <main style={S.main}>
+    <Layout onCreateLink={() => setShowCreate(true)}>
+      <div className="fade-in" style={{ padding: '40px' }}>
 
-        {/* ── STATS BAR ─────────────────────────────────────────────────── */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(4, 1fr)',
-          gap: '1px',
-          background: '#3F3F46',
-          marginBottom: '32px',
-        }}>
-          {[
-            { label: 'Total Links', value: urls.length },
-            { label: 'Total Clicks', value: totalClicks },
-            { label: 'Active Links', value: urls.filter(u => u.isActive).length },
-            { label: 'Uptime', value: '99.9%' },
-          ].map((s, i) => (
-            <div key={i} style={{ background: '#09090B', padding: '20px 24px' }}>
-              <div style={{ fontSize: '28px', fontWeight: 700, color: '#DFE104', lineHeight: 1 }}>{s.value}</div>
-              <div style={{ ...S.label, marginTop: '6px' }}>{s.label}</div>
+        {/* ── HEADER ────────────────────────────────────────────────── */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '48px' }}>
+          <div>
+            <h1 style={{ fontSize: '40px', fontWeight: 900, letterSpacing: '-0.04em' }}>Performance Snapshot</h1>
+            <p style={{ color: 'var(--text-muted)', fontSize: '15px', marginTop: '4px' }}>
+              Your ecosystem overview for the last 30 days.
+            </p>
+          </div>
+
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+            <div style={{
+              display: 'flex', background: 'var(--bg-secondary)',
+              borderRadius: 'var(--radius-full)', padding: '4px', border: '1px solid var(--border)'
+            }}>
+              {['MONTHLY', 'YEARLY'].map(label => (
+                <button key={label}
+                  onClick={() => setIsMonthly(label === 'MONTHLY')}
+                  style={{
+                    padding: '8px 24px', fontSize: '11px', fontWeight: 800,
+                    border: 'none', borderRadius: 'var(--radius-full)',
+                    background: (isMonthly === (label === 'MONTHLY')) ? 'var(--accent)' : 'transparent',
+                    color: (isMonthly === (label === 'MONTHLY')) ? '#000' : 'var(--text-muted)',
+                    cursor: 'pointer', transition: 'all 0.2s'
+                  }}
+                >{label}</button>
+              ))}
             </div>
-          ))}
-        </div>
 
-        {/* ── TOOLBAR ───────────────────────────────────────────────────── */}
-        <div style={{ display: 'flex', gap: '10px', marginBottom: '24px', flexWrap: 'wrap', alignItems: 'center' }}>
-          <input
-            placeholder="Search links..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            style={{ ...S.input, flex: '1 1 200px', minWidth: '160px' }}
-          />
-          <div style={{ position: 'relative', flex: '0 0 auto' }}>
-            <select
-              value={sort}
-              onChange={e => setSort(e.target.value as any)}
-              style={{ 
-                ...S.input, 
-                width: '140px', 
-                cursor: 'pointer',
-                paddingRight: '32px'
+            <button
+              onClick={() => setShowCreate(true)}
+              style={{
+                background: 'var(--accent)', color: '#000', border: 'none',
+                padding: '12px 24px', borderRadius: 'var(--radius-full)',
+                fontSize: '12px', fontWeight: 900, cursor: 'pointer',
+                display: 'flex', alignItems: 'center', gap: '8px'
               }}
             >
-              <option value="createdAt">Newest</option>
-              <option value="clicks">Most Clicks</option>
-              <option value="expiry">Expiring Soon</option>
-            </select>
-            {/* Custom SVG arrow to ensure perfect alignment */}
-            <svg 
-              width="10" height="6" viewBox="0 0 10 6" fill="none" 
-              style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}
-            >
-              <path d="M1 1L5 5L9 1" stroke="#A1A1AA" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
+              <Plus size={16} /> New Link
+            </button>
           </div>
-          <button style={S.btnGhost} onClick={() => setShowBulk(v => !v)}>
-            Bulk Upload
-          </button>
-          <button
-            style={{ ...S.btnYellow, padding: '10px 24px' }}
-            onClick={() => setShowCreate(v => !v)}
-          >
-            {showCreate ? 'Cancel' : '+ New Link'}
-          </button>
         </div>
 
-        {/* ── CREATE FORM ───────────────────────────────────────────────── */}
-        {showCreate && (
-          <div style={{ background: '#111', border: '2px solid #DFE104', padding: '24px', marginBottom: '24px' }}>
-            <div style={{ ...S.label, marginBottom: '16px' }}>Create New Link</div>
-            <form onSubmit={handleCreate} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div>
-                <div style={{ ...S.label, marginBottom: '6px' }}>Destination URL *</div>
-                <input
-                  required
-                  type="url"
-                  placeholder="https://example.com/very-long-url"
-                  value={newUrl}
-                  onChange={e => setNewUrl(e.target.value)}
-                  style={S.input}
-                />
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                <div>
-                  <div style={{ ...S.label, marginBottom: '6px' }}>Custom Alias (optional)</div>
-                  <div style={{ position: 'relative' }}>
-                    <input
-                      placeholder="my-link (min 3 chars)"
-                      value={alias}
-                      onChange={e => checkAlias(e.target.value)}
-                      style={{ ...S.input, paddingRight: '80px' }}
-                    />
-                    {alias.length >= 3 && (
-                      <span style={{
-                        position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)',
-                        fontSize: '10px', fontWeight: 700,
-                        color: aliasChecking ? '#555' : aliasAvail === true ? '#22c55e' : aliasAvail === false ? '#ef4444' : '#555'
-                      }}>
-                        {aliasChecking ? 'CHECKING...' : aliasAvail === true ? 'AVAILABLE' : aliasAvail === false ? 'TAKEN' : ''}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <div>
-                  <div style={{ ...S.label, marginBottom: '6px' }}>Expires At (optional)</div>
-                  <input
-                    type="datetime-local"
-                    value={expiresAt}
-                    onChange={e => setExpiresAt(e.target.value)}
-                    style={S.input}
-                  />
-                </div>
-              </div>
-              {createError && (
-                <div style={{ background: '#1a0000', border: '1px solid #ef4444', color: '#ef4444', padding: '10px 12px', fontSize: '12px', fontWeight: 600 }}>
-                  {createError}
-                </div>
-              )}
-              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-                <button type="button" style={S.btnGhost} onClick={() => setShowCreate(false)}>Cancel</button>
-                <button
-                  type="submit"
-                  disabled={creating || (!!alias && aliasAvail === false)}
-                  style={{ ...S.btnYellow, opacity: creating ? 0.6 : 1 }}
-                >
-                  {creating ? 'Creating...' : 'Create Link →'}
-                </button>
-              </div>
-            </form>
-          </div>
-        )}
+        {/* ── METRIC CARDS ─────────────────────────────────────────── */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(240px,1fr) minmax(240px,1fr) 1.5fr', gap: '24px', marginBottom: '48px' }}>
 
-        {/* ── BULK UPLOAD ───────────────────────────────────────────────── */}
-        {showBulk && (
-          <div style={{ background: '#111', border: '1px solid #3F3F46', padding: '24px', marginBottom: '24px' }}>
-            <div style={{ ...S.label, marginBottom: '12px' }}>Bulk Upload — Paste one URL per line</div>
-            <textarea
-              rows={6}
-              placeholder={'https://example.com\nhttps://google.com\nhttps://github.com'}
-              value={bulkText}
-              onChange={e => setBulkText(e.target.value)}
-              style={{ ...S.input, resize: 'vertical', marginBottom: '12px' }}
-            />
-            <button
-              onClick={handleBulk}
-              disabled={bulkLoading}
-              style={{ ...S.btnYellow, opacity: bulkLoading ? 0.6 : 1 }}
-            >
-              {bulkLoading ? 'Processing...' : `Upload ${bulkText.split('\n').filter(l => l.trim()).length} URLs`}
-            </button>
-            {bulkResults && (
-              <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                {bulkResults.map((r, i) => (
-                  <div key={i} style={{
-                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                    padding: '8px 12px',
-                    background: r.success ? '#0a1f0a' : '#1a0000',
-                    border: `1px solid ${r.success ? '#1a3a1a' : '#3a0a0a'}`,
-                    fontSize: '12px'
-                  }}>
-                    <span style={{ color: '#555', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '60%' }}>
-                      {r.originalUrl}
-                    </span>
-                    {r.success
-                      ? <span style={{ color: '#22c55e', fontWeight: 700 }}>/{r.shortCode}</span>
-                      : <span style={{ color: '#ef4444' }}>{r.error}</span>
-                    }
-                  </div>
-                ))}
+          {/* Total Links */}
+          <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '32px' }}>
+            <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '20px' }}>TOTAL LINKS</div>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px' }}>
+              <div style={{ fontSize: '48px', fontWeight: 900 }}>
+                {loading ? '—' : stats.totalLinks.toLocaleString()}
               </div>
+              <div style={{ fontSize: '14px', color: 'var(--accent)', fontWeight: 700 }}>
+                <TrendingUp size={14} style={{ marginLeft: '4px' }} />
+              </div>
+            </div>
+            <div style={{ marginTop: '12px', color: 'var(--text-muted)', fontSize: '12px' }}>
+              <Link2 size={12} style={{ marginRight: '6px', verticalAlign: 'middle' }} />
+              All active shortened URLs
+            </div>
+          </div>
+
+          {/* Total Clicks */}
+          <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '32px' }}>
+            <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '20px' }}>TOTAL CLICKS</div>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px' }}>
+              <div style={{ fontSize: '48px', fontWeight: 900 }}>
+                {loading ? '—' : stats.totalClicks >= 1000 ? `${(stats.totalClicks / 1000).toFixed(1)}K` : stats.totalClicks.toLocaleString()}
+              </div>
+              <div style={{ fontSize: '14px', color: 'var(--accent)', fontWeight: 700 }}>
+                <TrendingUp size={14} style={{ marginLeft: '4px' }} />
+              </div>
+            </div>
+            <div style={{ marginTop: '12px', color: 'var(--text-muted)', fontSize: '12px' }}>
+              <MousePointer2 size={12} style={{ marginRight: '6px', verticalAlign: 'middle' }} />
+              Across all links
+            </div>
+          </div>
+
+          {/* Top Performing Link */}
+          <div style={{
+            background: 'linear-gradient(135deg, #1A1A1A 0%, #111 100%)',
+            border: '2px solid var(--accent)',
+            boxShadow: '0 20px 40px rgba(203, 255, 0, 0.05)',
+            borderRadius: 'var(--radius-lg)', padding: '32px', position: 'relative', overflow: 'hidden'
+          }}>
+            <div style={{ position: 'absolute', top: '24px', right: '24px', color: 'var(--accent)' }}>
+              <Star size={24} fill="var(--accent)" />
+            </div>
+            <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '20px' }}>
+              TOP PERFORMING LINK
+            </div>
+            {topLink ? (
+              <>
+                <div style={{ fontSize: '22px', fontWeight: 900, marginBottom: '8px', letterSpacing: '-0.02em', color: '#fff', wordBreak: 'break-all' }}>
+                  {baseUrl}/{topLink.shortCode}
+                </div>
+                <div style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: 500, marginBottom: '12px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  → {topLink.originalUrl}
+                </div>
+                <div style={{ fontSize: '28px', fontWeight: 900, color: 'var(--accent)' }}>
+                  {(topLink.totalClicks || 0).toLocaleString()} <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-muted)' }}>clicks</span>
+                </div>
+              </>
+            ) : (
+              <div style={{ fontSize: '14px', color: 'var(--text-muted)', fontStyle: 'italic' }}>No data available yet...</div>
             )}
           </div>
-        )}
+        </div>
 
-        {/* ── URL LIST ──────────────────────────────────────────────────── */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', background: '#3F3F46' }}>
-
-          {/* Header row */}
-          <div style={{
-            background: '#1a1a1a',
-            display: 'grid',
-            gridTemplateColumns: '1fr auto auto auto auto',
-            gap: '16px',
-            padding: '10px 20px',
-            alignItems: 'center',
-          }}>
-            <span style={S.label}>Link</span>
-            <span style={{ ...S.label, minWidth: '60px', textAlign: 'right' }}>Clicks</span>
-            <span style={{ ...S.label, minWidth: '90px', textAlign: 'center' }}>Created</span>
-            <span style={{ ...S.label, minWidth: '60px', textAlign: 'center' }}>Expiry</span>
-            <span style={{ ...S.label, minWidth: '140px', textAlign: 'right' }}>Actions</span>
+        {/* ── RECENT LINKS TABLE ───────────────────────────────────── */}
+        <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '0', overflow: 'hidden' }}>
+          <div style={{ padding: '32px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <h2 style={{ fontSize: '24px', fontWeight: 900, letterSpacing: '-0.02em' }}>Recent Links</h2>
+              <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginTop: '4px' }}>Manage and monitor your shortened URLs.</p>
+            </div>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button
+                onClick={() => setShowBulk(true)}
+                style={{
+                  background: 'none', border: '1px solid var(--border)', color: 'var(--text-secondary)',
+                  padding: '10px 18px', borderRadius: '8px', fontSize: '12px', fontWeight: 800,
+                  display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer'
+                }}
+              >
+                <Filter size={16} /> Bulk Upload
+              </button>
+              <button
+                onClick={() => setShowCreate(true)}
+                style={{
+                  background: 'var(--accent)', border: 'none', color: '#000',
+                  padding: '10px 18px', borderRadius: '8px', fontSize: '12px', fontWeight: 800,
+                  display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer'
+                }}
+              >
+                <Plus size={16} /> Create Link
+              </button>
+            </div>
           </div>
 
           {loading ? (
-            [1, 2, 3].map(i => (
-              <div key={i} style={{ background: '#111', padding: '20px', display: 'flex', gap: '16px', alignItems: 'center' }}>
-                <div style={{ height: '14px', background: '#1a1a1a', flex: 1, borderRadius: '2px' }} />
-                <div style={{ height: '14px', background: '#1a1a1a', width: '60px', borderRadius: '2px' }} />
-              </div>
-            ))
-          ) : filtered.length === 0 ? (
-            <div style={{
-              background: '#09090B',
-              padding: '60px',
-              textAlign: 'center',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: '16px'
-            }}>
-              <div style={{ fontSize: '48px', fontWeight: 900, color: '#1a1a1a', letterSpacing: '-0.04em' }}>
-                {search ? 'NO RESULTS' : 'EMPTY'}
-              </div>
-              <p style={{ color: '#555', fontSize: '12px', letterSpacing: '0.1em' }}>
-                {search ? 'Try a different search term' : 'Create your first link to get started'}
-              </p>
-              {!search && (
-                <button style={S.btnYellow} onClick={() => setShowCreate(true)}>
-                  Create Your First Link
-                </button>
-              )}
+            <div style={{ padding: '60px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px', fontWeight: 800, letterSpacing: '0.1em' }}>
+              LOADING...
+            </div>
+          ) : urls.length === 0 ? (
+            <div style={{ padding: '80px', textAlign: 'center' }}>
+              <AlertCircle size={40} color="var(--text-muted)" style={{ margin: '0 auto 16px' }} />
+              <div style={{ fontSize: '18px', fontWeight: 800, marginBottom: '8px' }}>No links yet</div>
+              <div style={{ color: 'var(--text-muted)', fontSize: '13px', marginBottom: '24px' }}>Create your first short URL to see it here.</div>
+              <button
+                onClick={() => setShowCreate(true)}
+                style={{
+                  background: 'var(--accent)', color: '#000', border: 'none',
+                  padding: '14px 32px', borderRadius: 'var(--radius-full)',
+                  fontSize: '12px', fontWeight: 900, cursor: 'pointer'
+                }}
+              >CREATE MY FIRST LINK</button>
             </div>
           ) : (
-            filtered.map(url => (
-              <div key={url.id} style={{ background: '#09090B' }}>
-                {/* Main row */}
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr auto auto auto auto',
-                  gap: '16px',
-                  padding: '16px 20px',
-                  alignItems: 'center',
-                  borderBottom: editingId === url.id ? 'none' : undefined,
-                }}>
-                  {/* Link info */}
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
-                      <span style={{ fontSize: '16px', fontWeight: 700, color: '#DFE104', letterSpacing: '-0.01em' }}>
-                        /{url.shortCode}
-                      </span>
-                      <button
-                        onClick={() => copy(url.shortUrl)}
-                        style={{ ...S.btnGhost, padding: '3px 8px', fontSize: '9px' }}
-                        title="Copy short link"
-                      >
-                        Copy
-                      </button>
-                      {url.expiresAt && new Date(url.expiresAt) < new Date() && (
-                        <span style={{ fontSize: '9px', background: '#ef4444', color: '#fff', padding: '2px 6px', fontWeight: 700 }}>
-                          EXPIRED
-                        </span>
-                      )}
-                    </div>
-                    <div style={{
-                      fontSize: '12px', color: '#555',
-                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                    }}>
-                      {url.originalUrl}
-                    </div>
-                  </div>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--border)' }}>
+                    {['SHORT URL', 'ORIGINAL DESTINATION', 'CLICKS', 'CREATED DATE', ''].map(h => (
+                      <th key={h} style={{ padding: h ? '20px 20px' : '20px 32px', fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {urls.slice(0, 10).map((u) => (
+                    <tr key={u.id} style={{ borderBottom: '1px solid var(--border)' }} className="table-row-hover">
+                      <td style={{ padding: '20px 20px' }}>
+                        <div style={{ fontWeight: 800, color: '#fff', fontSize: '14px' }}>
+                          <a href={u.shortUrl} target="_blank" rel="noreferrer" style={{ color: 'inherit', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            {baseUrl}/{u.shortCode}
+                            <ExternalLink size={12} style={{ opacity: 0.4 }} />
+                          </a>
+                        </div>
+                      </td>
+                      <td style={{ padding: '20px' }}>
+                        <div style={{ color: 'var(--text-muted)', fontSize: '13px', maxWidth: '280px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {u.originalUrl}
+                        </div>
+                      </td>
+                      <td style={{ padding: '20px' }}>
+                        <div style={{
+                          background: 'var(--bg)', border: '1px solid var(--border)',
+                          padding: '4px 12px', borderRadius: '4px', display: 'inline-block',
+                          fontSize: '12px', fontWeight: 800, color: 'var(--text-secondary)'
+                        }}>
+                          {(u.totalClicks || 0).toLocaleString()}
+                        </div>
+                      </td>
+                      <td style={{ padding: '20px', color: 'var(--text-secondary)', fontSize: '13px', fontWeight: 500 }}>
+                        {format(new Date(u.createdAt), 'MMM dd, yyyy')}
+                      </td>
+                      <td style={{ padding: '20px 24px', textAlign: 'right' }}>
+                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                          {/* Copy */}
+                          <button
+                            onClick={() => handleCopy(u.shortUrl, u.id)}
+                            title="Copy short URL"
+                            style={{ background: copiedId === u.id ? 'rgba(203,255,0,0.1)' : 'none', border: '1px solid var(--border)', borderRadius: '6px', padding: '6px 10px', color: copiedId === u.id ? 'var(--accent)' : 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: 800 }}
+                          >
+                            {copiedId === u.id ? <Check size={14} /> : <Copy size={14} />}
+                          </button>
+                          {/* QR */}
+                          <button
+                            onClick={() => setSelectedQR(u.shortUrl)}
+                            title="Generate QR Code"
+                            style={{ background: 'none', border: '1px solid var(--border)', borderRadius: '6px', padding: '6px 10px', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', fontSize: '11px', fontWeight: 800 }}
+                          >
+                            QR
+                          </button>
+                          {/* Analytics */}
+                          <Link
+                            to={`/analytics/${u.shortCode}`}
+                            title="View Analytics"
+                            style={{ background: 'none', border: '1px solid var(--border)', borderRadius: '6px', padding: '6px 10px', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', textDecoration: 'none' }}
+                          >
+                            <BarChart2 size={14} />
+                          </Link>
+                          {/* Delete */}
+                          {confirmDeleteId === u.id ? (
+                            <div style={{ display: 'flex', gap: '4px' }}>
+                              <button
+                                onClick={() => setConfirmDeleteId(null)}
+                                style={{ background: 'none', border: '1px solid #333', borderRadius: '6px', padding: '6px 8px', color: '#666', cursor: 'pointer', fontSize: '10px', fontWeight: 800 }}
+                              >CANCEL</button>
+                              <button
+                                onClick={() => handleDelete(u.shortCode, u.id)}
+                                disabled={deletingId === u.id}
+                                style={{ background: 'rgba(255,68,68,0.15)', border: '1px solid rgba(255,68,68,0.5)', borderRadius: '6px', padding: '6px 10px', color: '#ff4444', cursor: 'pointer', fontSize: '10px', fontWeight: 900 }}
+                              >{deletingId === u.id ? '...' : 'CONFIRM?'}</button>
+                            </div>
+                          ) : (
+                          <button
+                            onClick={() => handleDelete(u.shortCode, u.id)}
+                            disabled={deletingId === u.id}
+                            title="Delete link"
+                            style={{ background: 'none', border: '1px solid rgba(255,68,68,0.3)', borderRadius: '6px', padding: '6px 10px', color: '#ff4444', cursor: 'pointer', display: 'flex', alignItems: 'center', opacity: deletingId === u.id ? 0.5 : 1 }}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
 
-                  {/* Clicks */}
-                  <div style={{ textAlign: 'right', minWidth: '60px' }}>
-                    <div style={{ fontSize: '20px', fontWeight: 700, color: '#FAFAFA', lineHeight: 1 }}>{url.totalClicks}</div>
-                    <div style={{ ...S.label, fontSize: '9px' }}>clicks</div>
-                  </div>
-
-                  {/* Created */}
-                  <div style={{ minWidth: '90px', textAlign: 'center' }}>
-                    <span style={{ fontSize: '11px', color: '#555' }}>
-                      {new Date(url.createdAt).toLocaleDateString()}
-                    </span>
-                  </div>
-
-                  {/* Expiry */}
-                  <div style={{ minWidth: '60px', textAlign: 'center' }}>
-                    {url.expiresAt ? (
-                      <span style={{ fontSize: '11px', color: new Date(url.expiresAt) < new Date() ? '#ef4444' : '#f59e0b' }}>
-                        {new Date(url.expiresAt).toLocaleDateString()}
-                      </span>
-                    ) : (
-                      <span style={{ fontSize: '11px', color: '#27272A' }}>—</span>
-                    )}
-                  </div>
-
-                  {/* Actions */}
-                  <div style={{ display: 'flex', gap: '6px', minWidth: '140px', justifyContent: 'flex-end' }}>
-                    <button style={S.btnGhost} onClick={() => setQrUrl(url.shortUrl)} title="QR Code">
-                      QR
-                    </button>
-                    <button
-                      style={S.btnGhost}
-                      onClick={() => {
-                        setEditingId(editingId === url.id ? null : url.id)
-                        setEditUrl(url.originalUrl)
-                      }}
-                      title="Edit destination"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      style={S.btnGhost}
-                      onClick={() => navigate(`/analytics/${url.shortCode}`)}
-                      title="Analytics"
-                    >
-                      Stats
-                    </button>
-                    {confirmDelete === url.shortCode ? (
-                      <>
-                        <button
-                          onClick={() => handleDelete(url.shortCode)}
-                          disabled={deleting === url.shortCode}
-                          style={{ ...S.btnDanger, background: '#ef4444', color: '#fff', padding: '7px 10px' }}
-                        >
-                          {deleting === url.shortCode ? '...' : 'Confirm'}
-                        </button>
-                        <button
-                          onClick={() => setConfirmDelete(null)}
-                          style={S.btnGhost}
-                        >
-                          Cancel
-                        </button>
-                      </>
-                    ) : (
-                      <button
-                        onClick={() => setConfirmDelete(url.shortCode)}
-                        disabled={deleting === url.shortCode}
-                        style={{
-                          ...S.btnDanger,
-                          opacity: deleting === url.shortCode ? 0.5 : 1,
-                          cursor: deleting === url.shortCode ? 'wait' : 'pointer',
-                        }}
-                      >
-                        Del
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {/* Edit row */}
-                {editingId === url.id && (
-                  <div style={{
-                    background: '#111', padding: '16px 20px',
-                    borderTop: '1px solid #DFE104',
-                    display: 'flex', gap: '10px', alignItems: 'center'
-                  }}>
-                    <div style={{ ...S.label, whiteSpace: 'nowrap' }}>New URL:</div>
-                    <input
-                      autoFocus
-                      type="url"
-                      value={editUrl}
-                      onChange={e => setEditUrl(e.target.value)}
-                      style={{ ...S.input, flex: 1 }}
-                      onKeyDown={e => e.key === 'Enter' && saveEdit(url.shortCode)}
-                    />
-                    <button
-                      onClick={() => saveEdit(url.shortCode)}
-                      disabled={editSaving}
-                      style={{ ...S.btnYellow, whiteSpace: 'nowrap', opacity: editSaving ? 0.6 : 1 }}
-                    >
-                      {editSaving ? 'Saving...' : 'Save →'}
-                    </button>
-                    <button style={S.btnGhost} onClick={() => setEditingId(null)}>Cancel</button>
-                  </div>
-                )}
-              </div>
-            ))
+          {urls.length > 0 && (
+            <div style={{ padding: '24px', textAlign: 'center', background: 'var(--bg)', borderTop: '1px solid var(--border)' }}>
+              <Link to="/links" style={{ color: 'var(--text-secondary)', textDecoration: 'none', fontSize: '12px', fontWeight: 800, letterSpacing: '0.1em' }}>
+                VIEW ALL LINKS →
+              </Link>
+            </div>
           )}
         </div>
+      </div>
 
-        {/* ── FOOTER HINTS ──────────────────────────────────────────────── */}
-        <div style={{ marginTop: '24px', textAlign: 'center', color: '#27272A', fontSize: '10px', letterSpacing: '0.15em' }}>
-          {urls.length} LINKS · {totalClicks} TOTAL CLICKS · ZURL
-        </div>
+      <AnimatePresence>
+        {showBulk && <BulkUpload onClose={() => setShowBulk(false)} onSuccess={fetchData} />}
+        {selectedQR && <QRModal shortUrl={selectedQR} onClose={() => setSelectedQR(null)} />}
+        {showCreate && <CreateLinkModal onClose={() => setShowCreate(false)} onSuccess={fetchData} />}
+      </AnimatePresence>
 
-      </main>
-
-      {/* ── QR MODAL ──────────────────────────────────────────────────────── */}
-      {qrUrl && <QRModal shortUrl={qrUrl} onClose={() => setQrUrl(null)} />}
-    </div>
+      <style>{`
+        .table-row-hover:hover { background: rgba(203, 255, 0, 0.02); }
+      `}</style>
+    </Layout>
   )
 }

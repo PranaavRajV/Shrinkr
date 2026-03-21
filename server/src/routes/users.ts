@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { User } from '../models/User'
 import { requireAuth } from '../middleware/auth'
 import { ok, fail } from '../utils/response'
+import mongoose from 'mongoose'
 
 const router = express.Router()
 router.use(requireAuth)
@@ -20,6 +21,32 @@ router.get('/me', async (req: Request, res: Response, next: NextFunction) => {
       avatar:    user.avatar || '',
       bio:       user.bio   || '',
       createdAt: user.createdAt,
+    })
+  } catch (err) { next(err) }
+})
+
+// ─── GET /api/users/me/stats ──────────────────────────────────────────────────
+router.get('/me/stats', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { Url } = await import('../models/Url')
+    const userId = req.user!.id
+    
+    // Convert string ID to Mongoose ObjectId for aggregation
+    const oid = new mongoose.Types.ObjectId(userId)
+
+    const [totalLinks, clickData] = await Promise.all([
+      Url.countDocuments({ userId }),
+      Url.aggregate([
+        { $match: { userId: oid } },
+        { $group: { _id: null, totalClicks: { $sum: '$totalClicks' } } }
+      ])
+    ])
+
+    return ok(res, {
+      stats: {
+        totalLinks,
+        totalClicks: clickData[0]?.totalClicks || 0
+      }
     })
   } catch (err) { next(err) }
 })
