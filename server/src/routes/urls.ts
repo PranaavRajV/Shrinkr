@@ -128,7 +128,7 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
       shortCode,
       customAlias,
       expiresAt,
-      linkPassword,
+      linkPassword: linkPassword || null,
       tags: tags || [],
       isActive: true
     })
@@ -210,7 +210,7 @@ router.patch('/:shortCode', async (req: Request, res: Response, next: NextFuncti
     if (parsed.data.expiresAt) url.expiresAt = parsed.data.expiresAt
     
     if (parsed.data.linkPassword !== undefined) {
-      url.linkPassword = parsed.data.linkPassword || ''
+      url.linkPassword = parsed.data.linkPassword || null
     }
     
     if (parsed.data.tags !== undefined) {
