@@ -46,6 +46,15 @@ export default function Profile() {
   const [newPw, setNewPw] = useState('')
   const [changingPw, setChangingPw] = useState(false)
 
+  // Sync with context if user changes (e.g. after background load or successful update)
+  useEffect(() => {
+    if (user) {
+      setName(user.name || '')
+      setBio(user.bio || '')
+      setAvatar(user.avatar || '')
+    }
+  }, [user])
+
   const handleAvatarClick = () => fileInputRef.current?.click()
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {

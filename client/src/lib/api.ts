@@ -1,8 +1,14 @@
 import axios from 'axios'
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4001'
+
+if (!import.meta.env.VITE_API_URL) {
+  console.warn('⚠️ VITE_API_URL is missing. Falling back to localhost. Check for typos like VITE_APT_URL!')
+}
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:4001',
-  timeout: 10000,
+  baseURL: API_URL,
+  timeout: 15000,
   headers: { 'Content-Type': 'application/json' },
 })
 
