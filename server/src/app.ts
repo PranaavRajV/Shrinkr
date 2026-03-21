@@ -18,6 +18,7 @@ import authRoutes from './routes/auth'
 import urlRoutes from './routes/urls'
 import analyticsRoutes from './routes/analytics'
 import userRoutes from './routes/users'
+import statsRouter from './routes/stats'
 
 const app = express()
 
@@ -55,6 +56,7 @@ app.use('/api/auth', authRoutes)
 app.use('/api/urls', urlRoutes)
 app.use('/api/analytics', analyticsRoutes)
 app.use('/api/users', userRoutes)
+app.use('/api/stats', statsRouter)
 
 // 4. Root & Health
 app.get('/health', (_req, res) => res.json({ success: true, message: 'Shrinkr API Running' }))

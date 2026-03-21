@@ -1,15 +1,22 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import api from '../lib/api'
 import { motion } from 'framer-motion'
 import { 
   BarChart3, Shield, History, Globe, Zap, 
   ArrowRight, MousePointer2, ExternalLink,
-  Search, Lock, CheckCircle2
+  Search, Lock, CheckCircle2, ChevronRight, Play
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 export default function Landing() {
+  const [stats, setStats] = useState<{ totalLinks: number, totalClicks: number } | null>(null)
+
+  useEffect(() => {
+    api.get('/api/stats')
+      .then(res => setStats(res.data.data))
+      .catch(() => {}) // Silently fail, placeholders show '...'
+  }, [])
   const [url, setUrl] = useState('')
   const [result, setResult] = useState('')
   const [loading, setLoading] = useState(false)
@@ -146,18 +153,22 @@ export default function Landing() {
         }} />
       </header>
 
-      {/* ── METRICS SECTION ─────────────────────────────────────────── */}
+      {/* ── METRIC SECTION ─────────────────────────────────────────── */}
       <section style={{ backgroundColor: '#111', padding: '100px 60px' }}>
          <div style={{ 
            maxWidth: '1200px', margin: '0 auto', display: 'flex', 
            justifyContent: 'space-around', textAlign: 'center' 
          }}>
             <div>
-               <div style={{ fontSize: '48px', fontWeight: 900 }}>10K+</div>
+               <div style={{ fontSize: '48px', fontWeight: 900 }}>
+                 {stats?.totalLinks?.toLocaleString() || '...'}
+               </div>
                <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.2em' }}>Links Created</div>
             </div>
             <div>
-               <div style={{ fontSize: '48px', fontWeight: 900 }}>1M+</div>
+               <div style={{ fontSize: '48px', fontWeight: 900 }}>
+                 {stats?.totalClicks?.toLocaleString() || '...'}
+               </div>
                <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.2em' }}>Clicks Tracked</div>
             </div>
             <div>
