@@ -15,6 +15,8 @@ import { useNotifications } from '../contexts/NotificationContext'
 import { Reveal, RevealText } from '../components/Reveal'
 import Magnetic from '../components/Magnetic'
 import CountUp from '../components/CountUp'
+import BulkUpload from '../components/BulkUpload'
+import { List } from 'lucide-react'
 
 export default function Links() {
   const [urls, setUrls] = useState<any[]>([])
@@ -28,6 +30,7 @@ export default function Links() {
     return () => clearTimeout(timer)
   }, [search])
   const [showCreate, setShowCreate] = useState(false)
+  const [showBulk, setShowBulk] = useState(false)
   const [selectedQR, setSelectedQR] = useState<string | null>(null)
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
@@ -109,21 +112,38 @@ export default function Links() {
               </p>
             </Reveal>
           </div>
-          <Reveal delay={0.3} direction="down">
-            <Magnetic>
-              <button
-                onClick={() => setShowCreate(true)}
-                style={{
-                  background: 'var(--accent)', color: 'var(--primary-foreground)', border: 'none',
-                  padding: '14px 28px', borderRadius: 'var(--radius-full)',
-                  fontSize: '12px', fontWeight: 900, cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', gap: '8px'
-                }}
-              >
-                <Plus size={16} /> Create New Link
-              </button>
-            </Magnetic>
-          </Reveal>
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <Reveal delay={0.25} direction="down">
+              <Magnetic>
+                <button
+                  onClick={() => setShowBulk(true)}
+                  style={{
+                    background: 'rgba(255,224,194,0.05)', color: 'var(--accent)', border: '1px solid rgba(255,224,194,0.2)',
+                    padding: '14px 24px', borderRadius: 'var(--radius-full)',
+                    fontSize: '11px', fontWeight: 900, cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', gap: '8px'
+                  }}
+                >
+                  <List size={14} /> Bulk Upload
+                </button>
+              </Magnetic>
+            </Reveal>
+            <Reveal delay={0.3} direction="down">
+              <Magnetic>
+                <button
+                  onClick={() => setShowCreate(true)}
+                  style={{
+                    background: 'var(--accent)', color: 'var(--primary-foreground)', border: 'none',
+                    padding: '14px 28px', borderRadius: 'var(--radius-full)',
+                    fontSize: '11px', fontWeight: 900, cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', gap: '8px'
+                  }}
+                >
+                  <Plus size={16} /> Create New Link
+                </button>
+              </Magnetic>
+            </Reveal>
+          </div>
         </div>
 
         {/* Search */}
@@ -342,6 +362,7 @@ export default function Links() {
       </div>
 
       <AnimatePresence>
+        {showBulk && <BulkUpload onClose={() => setShowBulk(false)} onSuccess={fetchUrls} />}
         {selectedQR && <QRModal shortUrl={selectedQR} onClose={() => setSelectedQR(null)} />}
         {showCreate && <CreateLinkModal onClose={() => setShowCreate(false)} onSuccess={fetchUrls} />}
       </AnimatePresence>

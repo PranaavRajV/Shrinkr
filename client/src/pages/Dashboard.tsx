@@ -6,7 +6,7 @@ import {
   Filter, BarChart2, Check,
   TrendingUp, Star, ExternalLink, AlertCircle, Lock, Tag, X, Search, Loader2, Edit2, Activity, Globe,
   Clock, MessageSquare, Pin, Zap, Terminal, Eye, EyeOff, Shield, Laptop, ChevronDown, ChevronUp, ChevronRight,
-  Sparkles, QrCode
+  Sparkles, QrCode, List
 } from 'lucide-react'
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts'
 import ShortcutsModal from '../components/ShortcutsModal'
@@ -446,6 +446,7 @@ export default function Dashboard() {
           </div>
           <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
             <Reveal delay={0.3} direction="down"><Magnetic><button onClick={handleExport} disabled={exporting} style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--text-muted)', border: '1px solid var(--border)', padding: '12px 20px', borderRadius: 'var(--radius-full)', fontSize: '11px', fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.2s', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{exporting ? <Loader2 size={14} className="animate-spin" /> : <Copy size={14} />}{exporting ? 'Exporting...' : 'Export CSV'}</button></Magnetic></Reveal>
+            <Reveal delay={0.35} direction="down"><Magnetic><button onClick={() => setShowBulk(true)} style={{ background: 'rgba(255,224,194,0.05)', color: 'var(--accent)', border: '1px solid rgba(255,224,194,0.2)', padding: '12px 20px', borderRadius: 'var(--radius-full)', fontSize: '11px', fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.2s', textTransform: 'uppercase', letterSpacing: '0.05em' }}><List size={14} /> Bulk Upload</button></Magnetic></Reveal>
             <Reveal delay={0.4} direction="down"><Magnetic><button onClick={() => checkAllHealth(urls)} disabled={checkingHealth} style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--text-muted)', border: '1px solid var(--border)', padding: '12px 20px', borderRadius: 'var(--radius-full)', fontSize: '11px', fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.2s', textTransform: 'uppercase', letterSpacing: '0.05em' }}><Activity size={14} className={checkingHealth ? 'animate-pulse' : ''} color={checkingHealth ? 'var(--accent)' : 'inherit'} />{checkingHealth ? 'Monitoring...' : 'Check Health'}</button></Magnetic></Reveal>
             <Reveal delay={0.5} direction="down"><Magnetic><button className="premium-gradient" onClick={() => setShowCreate(true)} style={{ color: '#000', border: 'none', padding: '14px 28px', borderRadius: 'var(--radius)', fontSize: '12px', fontWeight: 950, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', textTransform: 'uppercase', letterSpacing: '0.1em', boxShadow: '0 10px 30px rgba(255, 224, 194, 0.2)' }}><Plus size={16} strokeWidth={3} /> New Link</button></Magnetic></Reveal>
           </div>
