@@ -247,20 +247,35 @@ export default function CreateLinkModal({ onClose, onSuccess }: Props) {
         onClick={e => e.stopPropagation()}
         style={{
           background: 'var(--card)', border: '1px solid #1a1a1a',
-          borderRadius: '24px', padding: '48px',
+          borderRadius: '24px', padding: '48px 48px 64px 48px',
           width: '100%', maxWidth: '560px',
           boxShadow: '0 40px 100px rgba(0,0,0,0.9)',
-          maxHeight: '90vh', overflowY: 'auto'
+          maxHeight: '90vh', overflowY: 'auto',
+          position: 'relative'
         }}
       >
+        <button 
+          onClick={onClose} 
+          style={{ 
+            position: 'absolute', top: '24px', right: '24px', zIndex: 10,
+            background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border)', 
+            borderRadius: '12px', padding: '10px', cursor: 'pointer', 
+            color: 'var(--muted-foreground)', backdropFilter: 'blur(8px)',
+            transition: 'all 0.2s'
+          }}
+          className="modal-close-btn"
+        >
+          <X size={20} />
+          <style>{`
+            .modal-close-btn:hover { background: var(--border) !important; color: #fff !important; }
+          `}</style>
+        </button>
+
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '40px' }}>
           <div>
             <h2 style={{ fontSize: '32px', fontWeight: 900, letterSpacing: '-0.04em' }}>New Link</h2>
             <p style={{ color: 'var(--text-muted)', fontSize: '15px', marginTop: '4px' }}>Transform any URL into a trackable link.</p>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: '12px', padding: '10px', cursor: 'pointer', color: 'var(--muted-foreground)' }}>
-            <X size={20} />
-          </button>
         </div>
 
         {result ? (

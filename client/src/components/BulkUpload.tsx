@@ -104,22 +104,29 @@ export default function BulkUpload({ onClose, onSuccess }: BulkUploadProps) {
           background: 'var(--card)',
           borderRadius: '32px',
           width: '100%', maxWidth: '640px',
-          padding: '56px',
+          padding: '56px 56px 72px 56px',
           position: 'relative',
           boxShadow: '0 40px 120px rgba(0,0,0,1)',
           border: '1px solid #1a1a1a',
+          maxHeight: '94vh',
+          overflowY: 'auto'
         }}
       >
         <button
           onClick={onClose}
           style={{
-            position: 'absolute', top: '24px', right: '24px',
-            background: 'none', border: '1px solid #1a1a1a',
+            position: 'absolute', top: '24px', right: '24px', zIndex: 10,
+            background: 'rgba(0,0,0,0.2)', border: '1px solid #1a1a1a',
             borderRadius: '12px', padding: '10px', cursor: 'pointer',
-            color: 'var(--muted-foreground)', display: 'flex'
+            color: 'var(--muted-foreground)', display: 'flex',
+            backdropFilter: 'blur(8px)', transition: 'all 0.2s'
           }}
+          className="modal-close-btn"
         >
           <X size={20} />
+          <style>{`
+            .modal-close-btn:hover { background: #1a1a1a !important; color: #fff !important; }
+          `}</style>
         </button>
 
         <div style={{ marginBottom: '40px' }}>

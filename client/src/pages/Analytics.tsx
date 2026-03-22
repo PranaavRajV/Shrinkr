@@ -40,7 +40,9 @@ const S = {
   },
   label: {
     fontSize: '11px', fontWeight: 800 as const, color: 'var(--text-muted)',
-    textTransform: 'uppercase' as const, letterSpacing: '0.12em', marginBottom: '12px'
+    textTransform: 'uppercase' as const, letterSpacing: '0.12em', marginBottom: '12px',
+    paddingRight: '30px', // Prevent overlap with absolute icon
+    lineHeight: 1.4
   },
   chartTitle: {
     fontSize: '16px', fontWeight: 900 as const, color: 'var(--text-primary)',
