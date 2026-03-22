@@ -211,7 +211,7 @@ export default function Login() {
              </span>
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'center' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
             <GoogleLogin 
               onSuccess={async (credentialResponse) => {
                  if (credentialResponse.credential) {
@@ -236,8 +236,8 @@ export default function Login() {
               onError={() => {
                 toast.error('GOOGLE LOGIN FAILED')
               }}
-              useOneTap
-              shape="circle"
+              useOneTap={false} // Disabled for stability during origin setup
+              shape="pill"
               theme="filled_black"
               text="continue_with"
               width="440"
