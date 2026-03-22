@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react'
-import { Link } from 'react-router-dom'
+import { useState, useEffect, useCallback, useMemo } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { 
   Copy, Trash2, BarChart2, Check, 
@@ -19,7 +19,14 @@ import CountUp from '../components/CountUp'
 export default function Links() {
   const [urls, setUrls] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [search, setSearch] = useState('')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [search, setSearch] = useState(searchParams.get('search') || '')
+  const [debouncedSearch, setDebouncedSearch] = useState(search)
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search), 300)
+    return () => clearTimeout(timer)
+  }, [search])
   const [showCreate, setShowCreate] = useState(false)
   const [selectedQR, setSelectedQR] = useState<string | null>(null)
   const [copiedId, setCopiedId] = useState<string | null>(null)
@@ -34,7 +41,7 @@ export default function Links() {
   const fetchUrls = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await api.get('/api/urls', { params: { page, limit: 15, search: search || undefined } })
+      const res = await api.get('/api/urls', { params: { page, limit: 15, search: debouncedSearch || undefined } })
       setUrls(res.data.data.urls || [])
       setPagination(res.data.data.pagination)
     } catch {
@@ -42,7 +49,7 @@ export default function Links() {
     } finally {
       setLoading(false)
     }
-  }, [page, search])
+  }, [page, debouncedSearch])
 
   useEffect(() => { fetchUrls() }, [fetchUrls])
 
@@ -107,7 +114,7 @@ export default function Links() {
               <button
                 onClick={() => setShowCreate(true)}
                 style={{
-                  background: 'var(--accent)', color: '#000', border: 'none',
+                  background: 'var(--accent)', color: 'var(--primary-foreground)', border: 'none',
                   padding: '14px 28px', borderRadius: 'var(--radius-full)',
                   fontSize: '12px', fontWeight: 900, cursor: 'pointer',
                   display: 'flex', alignItems: 'center', gap: '8px'
@@ -128,7 +135,15 @@ export default function Links() {
               data-cursor="text"
               placeholder="Search by URL or short code..."
               value={search}
-              onChange={e => { setSearch(e.target.value); setPage(1) }}
+              onChange={e => { 
+                setSearch(e.target.value)
+                setPage(1)
+                setSearchParams(prev => {
+                  if (e.target.value) prev.set('search', e.target.value)
+                  else prev.delete('search')
+                  return prev
+                }, { replace: true })
+              }}
               style={{
                 width: '100%', background: 'var(--bg-secondary)', border: '1px solid var(--border)',
                 color: 'var(--text-primary)', fontSize: '14px', padding: '14px 16px 14px 44px',
@@ -163,7 +178,7 @@ export default function Links() {
                     <button
                       onClick={() => setShowCreate(true)}
                       style={{
-                        background: 'var(--accent)', color: '#000', border: 'none',
+                        background: 'var(--accent)', color: 'var(--primary-foreground)', border: 'none',
                         padding: '14px 32px', borderRadius: 'var(--radius-full)',
                         fontSize: '12px', fontWeight: 900, cursor: 'pointer'
                       }}
@@ -208,7 +223,7 @@ export default function Links() {
                                   onChange={e => setEditUrl(e.target.value)}
                                   style={{ flex: 1, background: 'var(--bg)', border: '1px solid var(--accent)', borderRadius: '6px', color: 'var(--text-primary)', fontSize: '13px', padding: '6px 10px', outline: 'none' }}
                                 />
-                                <button onClick={() => handleEdit(u.shortCode, u.id)} style={{ background: 'var(--accent)', color: '#000', border: 'none', borderRadius: '6px', padding: '6px 12px', fontWeight: 800, fontSize: '11px', cursor: 'pointer' }}>SAVE</button>
+                                <button onClick={() => handleEdit(u.shortCode, u.id)} style={{ background: 'var(--accent)', color: 'var(--primary-foreground)', border: 'none', borderRadius: '6px', padding: '6px 12px', fontWeight: 800, fontSize: '11px', cursor: 'pointer' }}>SAVE</button>
                                 <button onClick={() => setEditingId(null)} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: '6px', padding: '6px 12px', color: 'var(--text-muted)', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}><X size={12} /></button>
                               </motion.div>
                             ) : (
@@ -245,9 +260,9 @@ export default function Links() {
                               return (
                                 <span style={{ 
                                   fontSize: '10px', fontWeight: 900, padding: '3px 8px', borderRadius: '4px',
-                                  background: isExpired ? 'rgba(255,68,68,0.1)' : 'rgba(203,255,0,0.1)',
-                                  color: isExpired ? '#ff4444' : '#CBFF00',
-                                  border: `1px solid ${isExpired ? 'rgba(255,68,68,0.2)' : 'rgba(203,255,0,0.2)'}`
+                                  background: isExpired ? 'rgba(255,68,68,0.1)' : 'rgba(255,224,194,0.1)',
+                                  color: isExpired ? '#ff4444' : '#ffe0c2',
+                                  border: `1px solid ${isExpired ? 'rgba(255,68,68,0.2)' : 'rgba(255,224,194,0.2)'}`
                                 }}>
                                   {isExpired ? 'EXPIRED' : exp ? `EXPIRES ${format(exp, 'MMM dd')}` : 'ACTIVE'}
                                 </span>
@@ -257,7 +272,7 @@ export default function Links() {
                           <td style={{ padding: '16px 20px' }}>
                             <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                               <Magnetic strength={0.2}>
-                                <button title="Copy" onClick={() => handleCopy(u.shortUrl, u.id)} style={{ background: copiedId === u.id ? 'rgba(203,255,0,0.1)' : 'none', border: '1px solid var(--border)', borderRadius: '6px', padding: '6px 8px', color: copiedId === u.id ? 'var(--accent)' : 'var(--text-muted)', cursor: 'pointer' }}>
+                                <button title="Copy" onClick={() => handleCopy(u.shortUrl, u.id)} style={{ background: copiedId === u.id ? 'rgba(255,224,194,0.1)' : 'none', border: '1px solid var(--border)', borderRadius: '6px', padding: '6px 8px', color: copiedId === u.id ? 'var(--accent)' : 'var(--text-muted)', cursor: 'pointer' }}>
                                   {copiedId === u.id ? <Check size={13} className="animate-in" /> : <Copy size={13} />}
                                 </button>
                               </Magnetic>
@@ -283,8 +298,8 @@ export default function Links() {
                                     animate={{ opacity: 1, scale: 1, x: 0 }}
                                     style={{ display: 'flex', gap: '4px', position: 'absolute', right: 0, top: '-15px', zIndex: 10, background: 'var(--bg-secondary)', padding: '4px', borderRadius: '8px', border: '1px solid var(--border)' }}
                                   >
-                                    <button onClick={() => setConfirmDeleteId(null)} style={{ background: 'none', border: '1px solid #333', borderRadius: '6px', padding: '4px 6px', color: '#666', cursor: 'pointer', fontSize: '9px', fontWeight: 800 }}>NO</button>
-                                    <button onClick={() => handleDelete(u.shortCode, u.id)} disabled={deletingId === u.id} style={{ background: '#ff4444', border: 'none', borderRadius: '6px', padding: '4px 8px', color: '#000', cursor: 'pointer', fontSize: '9px', fontWeight: 900 }}>
+                                    <button onClick={() => setConfirmDeleteId(null)} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: '6px', padding: '4px 6px', color: '#666', cursor: 'pointer', fontSize: '9px', fontWeight: 800 }}>NO</button>
+                                    <button onClick={() => handleDelete(u.shortCode, u.id)} disabled={deletingId === u.id} style={{ background: '#ff4444', border: 'none', borderRadius: '6px', padding: '4px 8px', color: 'var(--primary-foreground)', cursor: 'pointer', fontSize: '9px', fontWeight: 900 }}>
                                       {deletingId === u.id ? <Loader2 size={10} className="animate-spin" /> : 'YES'}
                                     </button>
                                   </motion.div>
@@ -333,7 +348,7 @@ export default function Links() {
 
       <style>{`
         .table-row-hover { transition: background 0.2s ease; }
-        .table-row-hover:hover { background: rgba(203, 255, 0, 0.02) !important; }
+        .table-row-hover:hover { background: rgba(255, 224, 194, 0.02) !important; }
         .animate-in { animation: animateIn 0.2s ease-out forwards; }
         @keyframes animateIn { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); } }
       `}</style>

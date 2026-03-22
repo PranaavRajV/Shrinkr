@@ -42,16 +42,15 @@ export default function Register() {
       
       {/* ── LEFT COLUMN: Brand & Stats ─────────────────────────────────── */}
       <div style={{
-        backgroundColor: '#0F0F0F',
+        backgroundColor: '#0a0a0a',
         display: 'flex', flexDirection: 'column',
         padding: '80px', position: 'relative',
         borderRight: '1px solid var(--border)'
       }}>
         <div style={{ marginBottom: '80px' }}>
-          <h1 style={{ 
-            fontSize: '48px', fontWeight: 900, 
-            letterSpacing: '-0.05em', color: 'var(--accent)',
-            fontFamily: 'Space Grotesk, sans-serif'
+          <h1 className="font-display" style={{ 
+            fontSize: '48px', color: 'var(--accent)',
+            letterSpacing: '-0.05em'
           }}>
             ZURL
             <div style={{ width: '60px', height: '4px', background: 'var(--accent)', marginTop: '8px', opacity: 0.5 }} />
@@ -114,14 +113,14 @@ export default function Register() {
                  placeholder="First Name" 
                  style={{ 
                    background: 'var(--bg-secondary)', border: '1px solid var(--border)',
-                   padding: '16px 20px', borderRadius: 'var(--radius-md)', color: '#fff'
+                   padding: '16px 20px', borderRadius: 'var(--radius-md)', color: 'var(--foreground)'
                  }} 
                />
                <input 
                  placeholder="Last Name" 
                  style={{ 
                    background: 'var(--bg-secondary)', border: '1px solid var(--border)',
-                   padding: '16px 20px', borderRadius: 'var(--radius-md)', color: '#fff'
+                   padding: '16px 20px', borderRadius: 'var(--radius-md)', color: 'var(--foreground)'
                  }} 
                />
             </div>
@@ -130,7 +129,7 @@ export default function Register() {
               type="email" placeholder="Email Address" required value={email} onChange={e => setEmail(e.target.value)}
               style={{ 
                 background: 'var(--bg-secondary)', border: '1px solid var(--border)',
-                padding: '16px 20px', borderRadius: 'var(--radius-md)', color: '#fff'
+                padding: '16px 20px', borderRadius: 'var(--radius-md)', color: 'var(--foreground)'
               }} 
             />
 
@@ -139,7 +138,7 @@ export default function Register() {
                  type={showPw ? 'text' : 'password'} placeholder="Create Password" required value={password} onChange={e => setPassword(e.target.value)}
                  style={{ 
                    width: '100%', background: 'var(--bg-secondary)', border: '1px solid var(--border)',
-                   padding: '16px 20px', paddingRight: '50px', borderRadius: 'var(--radius-md)', color: '#fff'
+                   padding: '16px 20px', paddingRight: '50px', borderRadius: 'var(--radius-md)', color: 'var(--foreground)'
                  }} 
                />
                <button 
@@ -155,7 +154,7 @@ export default function Register() {
                  type="password" placeholder="Confirm Password" required value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)}
                  style={{ 
                    width: '100%', background: 'var(--bg-secondary)', border: '1px solid var(--border)',
-                   padding: '16px 20px', borderRadius: 'var(--radius-md)', color: '#fff'
+                   padding: '16px 20px', borderRadius: 'var(--radius-md)', color: 'var(--foreground)'
                  }} 
                />
             </div>
@@ -170,10 +169,10 @@ export default function Register() {
             <button 
               type="submit" disabled={loading}
               style={{
-                height: '60px', background: 'var(--accent)', color: '#000',
+                height: '60px', background: 'var(--accent)', color: 'var(--primary-foreground)',
                 border: 'none', borderRadius: 'var(--radius-full)', fontWeight: 800,
                 fontSize: '15px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                gap: '10px', boxShadow: '0 10px 30px rgba(203, 255, 0, 0.2)', marginTop: '10px'
+                gap: '10px', boxShadow: '0 10px 30px rgba(255, 224, 194, 0.2)', marginTop: '10px'
               }}
             >
               {loading ? 'Processing...' : 'Create My Account'}

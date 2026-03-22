@@ -73,7 +73,26 @@ app.use('/api/docs', docsRoutes)
 app.use('/api/ai', aiRoutes)
 
 // 4. Root & Health
-app.get('/health', (_req, res) => res.json({ success: true, message: 'Shrinkr API Running' }))
+app.get('/health', async (_req, res) => {
+  const mongoStatus = mongoose.connection.readyState === 1 ? 'up' : 'down'
+  let redisStatus = 'down'
+  try {
+    const redis = await getRedisClient()
+    const pong = await redis.ping()
+    if (pong === 'PONG') redisStatus = 'up'
+  } catch {}
+
+  const status = (mongoStatus === 'up' && redisStatus === 'up') ? 200 : 503
+  res.status(status).json({
+    success: status === 200,
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    services: {
+      mongodb: mongoStatus,
+      redis: redisStatus
+    }
+  })
+})
 
 // 5. Redirect Route (Hardened)
 app.get('/:shortCode', async (req, res, next) => {

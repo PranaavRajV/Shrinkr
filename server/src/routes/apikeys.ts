@@ -86,18 +86,14 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
 
 /**
  * @route DELETE /api/apikeys/:keyId
- * @desc Revoke an API key
+ * @desc Permanently delete an API key
  */
 router.delete('/:keyId', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { keyId } = req.params
-    const apiKey = await ApiKey.findOneAndUpdate(
-      { _id: keyId, userId: req.user!.id },
-      { isActive: false },
-      { new: true }
-    )
-    if (!apiKey) return fail(res, 404, 'API Key not found', 'KEY_NOT_FOUND')
-    return ok(res, { message: 'API key revoked' })
+    const apiKey = await ApiKey.findOneAndDelete({ _id: keyId, userId: req.user!.id })
+    if (!apiKey) return fail(res, 404, 'API Key not found or unauthorized', 'KEY_NOT_FOUND')
+    return ok(res, { message: 'API key permanently deleted' })
   } catch (err) {
     next(err)
   }

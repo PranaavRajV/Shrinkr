@@ -6,6 +6,8 @@ import { createHash } from 'crypto'
 import { User } from '../models/User'
 import { getRedisClient } from '../config/redis'
 import { ok, fail } from '../utils/response'
+import speakeasy from 'speakeasy'
+import bcrypt from 'bcryptjs'
 
 const router = express.Router()
 
@@ -298,48 +300,49 @@ router.post('/2fa/authenticate', async (req: Request, res: Response, next: NextF
     }
 
     let success = false
-    if (token) {
-      const speakeasy = (await import('speakeasy')).default
+    let usedBackupCode = false
+    
+    // 1. Try as TOTP code first (if 6 digits)
+    if (token && token.length === 6) {
       success = speakeasy.totp.verify({
         secret: user.twoFactorSecret!,
         encoding: 'base32',
         token,
-        window: 1
+        window: 1 // +/- 30 seconds
       })
-    } else if (backupCode) {
-      const bcrypt = (await import('bcryptjs')).default
-      const upperCode = backupCode.toUpperCase()
-      
-      const matchedIndex = await Promise.race(
-        (user.twoFactorBackupCodes || []).map(async (hashed, idx) => {
-          const match = await bcrypt.compare(upperCode, hashed)
-          return match ? idx : -1
-        })
-      )
-      
-      // Wait, Promise.race won't work easily here to find the index. 
-      // I'll use a simple loop or Promise.all.
+    }
+
+    // 2. Try as backup code if totp failed or not provided
+    if (!success && (backupCode || (token && token.length > 6))) {
+      const codeToTry = (backupCode || token || '').toUpperCase().trim()
       const matchResults = await Promise.all(
-        (user.twoFactorBackupCodes || []).map(hashed => bcrypt.compare(upperCode, hashed))
+        (user.twoFactorBackupCodes || []).map(hashed => bcrypt.compare(codeToTry, hashed))
       )
       const idx = matchResults.findIndex(r => r === true)
       
       if (idx !== -1) {
         success = true
+        usedBackupCode = true
         user.twoFactorBackupCodes?.splice(idx, 1) // Consume code
         await user.save()
       }
     }
 
     if (!success) {
-      return fail(res, 401, 'Invalid 2FA code or backup code', 'INVALID_CODE')
+      console.warn(`[2FA] Failed authentication attempt for ${user.email}`)
+      return fail(res, 401, 'Invalid authentication code or expired session', 'INVALID_CODE')
     }
 
     const accessToken = signAccessToken(user._id.toString(), user.email)
     const refreshToken = signRefreshToken(user._id.toString(), user.email)
 
     return ok(res, {
-      user: { id: user._id.toString(), email: user.email },
+      user: { 
+        id: user._id.toString(), 
+        email: user.email,
+        twoFactorUsed: true,
+        isBackupUsed: usedBackupCode
+      },
       accessToken,
       refreshToken
     }, 'MFA verification successful')

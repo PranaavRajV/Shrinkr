@@ -11,11 +11,11 @@ import Magnetic from '../components/Magnetic'
 import CountUp from '../components/CountUp'
 import { motion } from 'framer-motion'
 
-const COLORS = ['#CBFF00', '#A3CC00', '#7A9900', '#526600', '#2B3300']
+const COLORS = ['#ffe0c2', '#c8967a', '#9a5f42', '#644a40', '#392519']
 const DEVICE_COLORS: Record<string, string> = {
-  desktop: '#CBFF00',
-  mobile: '#A3CC00',
-  tablet: '#526600',
+  desktop: '#ffe0c2',
+  mobile: '#c8967a',
+  tablet: '#644a40',
   Other: '#333300'
 }
 
@@ -57,7 +57,7 @@ export default function PublicStats() {
         <div style={{ minHeight: '60vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px', textAlign: 'center' }}>
           <h2 style={{ fontSize: '48px', fontWeight: 900, marginBottom: '16px' }}>404</h2>
           <p style={{ color: 'var(--text-muted)', marginBottom: '32px' }}>This link's public stats are either private or the link doesn't exist.</p>
-          <Magnetic><button onClick={() => navigate('/')} style={{ background: 'var(--accent)', color: '#000', border: 'none', padding: '16px 32px', borderRadius: 'var(--radius-full)', fontWeight: 900, cursor: 'pointer' }}>RETURN HOME</button></Magnetic>
+          <Magnetic><button onClick={() => navigate('/')} style={{ background: 'var(--accent)', color: 'var(--primary-foreground)', border: 'none', padding: '16px 32px', borderRadius: 'var(--radius-full)', fontWeight: 900, cursor: 'pointer' }}>RETURN HOME</button></Magnetic>
         </div>
       </Layout>
     )
@@ -81,7 +81,7 @@ export default function PublicStats() {
           <RevealText text="Public Insights" />
           <Reveal delay={0.2}>
             <div style={{ marginTop: '12px', fontSize: '18px', color: 'var(--text-muted)' }}>
-              Statistics for <span style={{ color: '#fff', fontWeight: 700 }}>/{shortCode}</span>
+              Statistics for <span style={{ color: 'var(--foreground)', fontWeight: 700 }}>/{shortCode}</span>
             </div>
           </Reveal>
         </div>
@@ -155,11 +155,11 @@ export default function PublicStats() {
 
         {/* CTA */}
         <Reveal delay={0.7} direction="up">
-          <div style={{ background: 'var(--accent)', color: '#000', borderRadius: '24px', padding: '48px', textAlign: 'center', boxShadow: '0 20px 40px rgba(203,255,0,0.15)' }}>
+          <div style={{ background: 'var(--accent)', color: 'var(--primary-foreground)', borderRadius: '24px', padding: '48px', textAlign: 'center', boxShadow: '0 20px 40px rgba(255,224,194,0.15)' }}>
             <h3 style={{ fontSize: '28px', fontWeight: 900, marginBottom: '12px', letterSpacing: '-0.03em' }}>Create your own tracked links.</h3>
             <p style={{ fontSize: '15px', fontWeight: 700, marginBottom: '32px', opacity: 0.8 }}>Join Shrinkr and get advanced analytics, custom aliases, and more.</p>
             <Magnetic>
-              <button onClick={() => navigate('/register')} style={{ background: '#000', color: '#fff', border: 'none', padding: '18px 40px', borderRadius: '12px', fontSize: '13px', fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', margin: '0 auto' }}>
+              <button onClick={() => navigate('/register')} style={{ background: 'var(--background)', color: 'var(--foreground)', border: 'none', padding: '18px 40px', borderRadius: '12px', fontSize: '13px', fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', margin: '0 auto' }}>
                 GET STARTED FOR FREE <ArrowRight size={18} />
               </button>
             </Magnetic>

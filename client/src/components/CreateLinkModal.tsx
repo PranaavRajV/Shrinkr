@@ -246,7 +246,7 @@ export default function CreateLinkModal({ onClose, onSuccess }: Props) {
         exit={{ scale: 0.9, opacity: 0 }}
         onClick={e => e.stopPropagation()}
         style={{
-          background: '#111', border: '1px solid #1a1a1a',
+          background: 'var(--card)', border: '1px solid #1a1a1a',
           borderRadius: '24px', padding: '48px',
           width: '100%', maxWidth: '560px',
           boxShadow: '0 40px 100px rgba(0,0,0,0.9)',
@@ -258,7 +258,7 @@ export default function CreateLinkModal({ onClose, onSuccess }: Props) {
             <h2 style={{ fontSize: '32px', fontWeight: 900, letterSpacing: '-0.04em' }}>New Link</h2>
             <p style={{ color: 'var(--text-muted)', fontSize: '15px', marginTop: '4px' }}>Transform any URL into a trackable link.</p>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: '1px solid #222', borderRadius: '12px', padding: '10px', cursor: 'pointer', color: '#555' }}>
+          <button onClick={onClose} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: '12px', padding: '10px', cursor: 'pointer', color: 'var(--muted-foreground)' }}>
             <X size={20} />
           </button>
         </div>
@@ -267,7 +267,7 @@ export default function CreateLinkModal({ onClose, onSuccess }: Props) {
           <div style={{ textAlign: 'center' }}>
             <div style={{ background: 'var(--bg-secondary)', border: '2px solid var(--accent)', borderRadius: '20px', padding: '32px', marginBottom: '32px' }}>
               <div style={{ fontSize: '11px', fontWeight: 900, color: 'var(--accent)', letterSpacing: '0.2em', marginBottom: '16px' }}>LINK IS READY ✓</div>
-              <div style={{ fontSize: '24px', fontWeight: 900, color: '#fff', letterSpacing: '-0.02em', wordBreak: 'break-all', marginBottom: '12px' }}>
+              <div style={{ fontSize: '24px', fontWeight: 900, color: 'var(--foreground)', letterSpacing: '-0.02em', wordBreak: 'break-all', marginBottom: '12px' }}>
                 {result.shortUrl}
               </div>
               <div style={{ fontSize: '12px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -278,7 +278,7 @@ export default function CreateLinkModal({ onClose, onSuccess }: Props) {
               <button
                 onClick={handleCopy}
                 style={{
-                  background: 'var(--accent)', color: '#000', border: 'none',
+                  background: 'var(--accent)', color: 'var(--primary-foreground)', border: 'none',
                   padding: '16px 36px', borderRadius: '12px',
                   fontSize: '13px', fontWeight: 900, cursor: 'pointer',
                   display: 'flex', alignItems: 'center', gap: '8px'
@@ -287,11 +287,11 @@ export default function CreateLinkModal({ onClose, onSuccess }: Props) {
                 {copied ? <Check size={18} /> : <Copy size={18} />}
                 {copied ? 'COPIED!' : 'COPY URL'}
               </button>
-              <a href={result.shortUrl} target="_blank" rel="noreferrer" style={{ background: 'none', border: '1px solid #222', color: '#fff', padding: '16px 32px', borderRadius: '12px', textDecoration: 'none', fontSize: '13px', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <a href={result.shortUrl} target="_blank" rel="noreferrer" style={{ background: 'none', border: '1px solid var(--border)', color: 'var(--foreground)', padding: '16px 32px', borderRadius: '12px', textDecoration: 'none', fontSize: '13px', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <ExternalLink size={18} /> TEST
               </a>
             </div>
-            <button onClick={() => { setResult(null); setOriginalUrl(''); setCustomAlias(''); setSuggestions([]); setSuggesting(false) }} style={{ marginTop: '32px', background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: '12px', fontWeight: 900 }}>
+            <button onClick={() => { setResult(null); setOriginalUrl(''); setCustomAlias(''); setSuggestions([]); setSuggesting(false) }} style={{ marginTop: '32px', background: 'none', border: 'none', color: 'var(--muted-foreground)', cursor: 'pointer', fontSize: '12px', fontWeight: 900 }}>
               CREATE ANOTHER →
             </button>
           </div>
@@ -308,7 +308,7 @@ export default function CreateLinkModal({ onClose, onSuccess }: Props) {
                 value={originalUrl}
                 onChange={e => handleUrlChange(e.target.value)}
                 required
-                style={{ width: '100%', background: '#0a0a0a', border: '1px solid #1a1a1a', color: '#fff', fontSize: '15px', padding: '18px 20px', borderRadius: '14px', outline: 'none' }}
+                style={{ width: '100%', background: 'var(--background)', border: '1px solid #1a1a1a', color: 'var(--foreground)', fontSize: '15px', padding: '18px 20px', borderRadius: '14px', outline: 'none' }}
               />
 
               {/* AI SUGGESTIONS UI */}
@@ -357,12 +357,12 @@ export default function CreateLinkModal({ onClose, onSuccess }: Props) {
                               style={{ 
                                 background: 'none', border: '1px solid var(--border)', 
                                 borderRadius: 'var(--radius-sm)', padding: '8px 16px', fontSize: '11px', fontWeight: 800,
-                                color: '#fff', textTransform: 'uppercase', letterSpacing: '0.08em', cursor: 'pointer',
+                                color: 'var(--foreground)', textTransform: 'uppercase', letterSpacing: '0.08em', cursor: 'pointer',
                                 transition: 'all 150ms ease'
                               }}
                               whileHover={{ 
                                 backgroundColor: 'var(--accent)', 
-                                color: '#000',
+                                color: 'var(--primary-foreground)',
                                 translateY: -1
                               }}
                               whileTap={{ scale: 0.95 }}
@@ -417,7 +417,7 @@ export default function CreateLinkModal({ onClose, onSuccess }: Props) {
                               onChange={e => setUtm({ ...utm, [f.key]: e.target.value })}
                               style={{ 
                                 width: '100%', background: 'transparent', border: 'none', borderBottom: '1px solid var(--border)', 
-                                color: '#fff', fontSize: '12px', padding: '10px 0', borderRadius: 0, outline: 'none',
+                                color: 'var(--foreground)', fontSize: '12px', padding: '10px 0', borderRadius: 0, outline: 'none',
                                 transition: 'border-color 0.2s'
                               }}
                               onFocus={(e) => e.target.style.borderBottomColor = 'var(--accent)'}
@@ -482,7 +482,7 @@ export default function CreateLinkModal({ onClose, onSuccess }: Props) {
                               onChange={e => setTargeting({ ...targeting, mobile: e.target.value })}
                               style={{ 
                                 width: '100%', background: 'transparent', border: 'none', borderBottom: '1px solid var(--border)', 
-                                color: '#fff', fontSize: '12px', padding: '10px 0', borderRadius: 0, outline: 'none',
+                                color: 'var(--foreground)', fontSize: '12px', padding: '10px 0', borderRadius: 0, outline: 'none',
                                 transition: 'border-color 0.2s'
                               }}
                               onFocus={(e) => e.target.style.borderBottomColor = 'var(--accent)'}
@@ -500,7 +500,7 @@ export default function CreateLinkModal({ onClose, onSuccess }: Props) {
                               onChange={e => setTargeting({ ...targeting, tablet: e.target.value })}
                               style={{ 
                                 width: '100%', background: 'transparent', border: 'none', borderBottom: '1px solid var(--border)', 
-                                color: '#fff', fontSize: '12px', padding: '10px 0', borderRadius: 0, outline: 'none',
+                                color: 'var(--foreground)', fontSize: '12px', padding: '10px 0', borderRadius: 0, outline: 'none',
                                 transition: 'border-color 0.2s'
                               }}
                               onFocus={(e) => e.target.style.borderBottomColor = 'var(--accent)'}
@@ -548,7 +548,7 @@ export default function CreateLinkModal({ onClose, onSuccess }: Props) {
                                   onChange={e => setCountryCode(e.target.value.toUpperCase())}
                                   style={{ 
                                     width: '100%', background: 'transparent', border: 'none', borderBottom: '1px solid var(--border)', 
-                                    color: '#fff', fontSize: '12px', padding: '10px 0', borderRadius: 0, outline: 'none', textAlign: 'center' 
+                                    color: 'var(--foreground)', fontSize: '12px', padding: '10px 0', borderRadius: 0, outline: 'none', textAlign: 'center' 
                                   }}
                                   onFocus={(e) => e.target.style.borderBottomColor = 'var(--accent)'}
                                   onBlur={(e) => e.target.style.borderBottomColor = 'var(--border)'}
@@ -562,7 +562,7 @@ export default function CreateLinkModal({ onClose, onSuccess }: Props) {
                                   onChange={e => setCountryUrl(e.target.value)}
                                   style={{ 
                                     width: '100%', background: 'transparent', border: 'none', borderBottom: '1px solid var(--border)', 
-                                    color: '#fff', fontSize: '12px', padding: '10px 0', borderRadius: 0, outline: 'none' 
+                                    color: 'var(--foreground)', fontSize: '12px', padding: '10px 0', borderRadius: 0, outline: 'none' 
                                   }}
                                   onFocus={(e) => e.target.style.borderBottomColor = 'var(--accent)'}
                                   onBlur={(e) => e.target.style.borderBottomColor = 'var(--border)'}
@@ -572,7 +572,7 @@ export default function CreateLinkModal({ onClose, onSuccess }: Props) {
                                 type="button"
                                 onClick={addCountryTarget}
                                 style={{ 
-                                  background: 'var(--accent)', color: '#000', border: 'none', 
+                                  background: 'var(--accent)', color: 'var(--primary-foreground)', border: 'none', 
                                   padding: '10px 16px', borderRadius: '8px', fontSize: '10px', 
                                   fontWeight: 900, cursor: 'pointer', letterSpacing: '0.05em' 
                                 }}
@@ -613,14 +613,14 @@ export default function CreateLinkModal({ onClose, onSuccess }: Props) {
                     ) : (
                       <>
                         {ogPreview.image && (
-                          <img src={ogPreview.image} alt="" style={{ width: '100px', height: '80px', borderRadius: '12px', objectFit: 'cover', flexShrink: 0, border: '1px solid #222' }} />
+                          <img src={ogPreview.image} alt="" style={{ width: '100px', height: '80px', borderRadius: '12px', objectFit: 'cover', flexShrink: 0, border: '1px solid var(--border)' }} />
                         )}
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
                             {ogPreview.favicon && <img src={ogPreview.favicon} alt="" style={{ width: '14px', height: '14px', borderRadius: '2px' }} />}
                             <span style={{ fontSize: '10px', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{ogPreview.siteName}</span>
                           </div>
-                          <h4 style={{ fontSize: '14px', fontWeight: 800, color: '#fff', marginBottom: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ogPreview.title}</h4>
+                          <h4 style={{ fontSize: '14px', fontWeight: 800, color: 'var(--foreground)', marginBottom: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ogPreview.title}</h4>
                           <p style={{ fontSize: '11px', color: 'var(--text-muted)', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{ogPreview.description}</p>
                         </div>
                       </>
@@ -647,8 +647,8 @@ export default function CreateLinkModal({ onClose, onSuccess }: Props) {
                     setSuggestions([])
                   }}
                   style={{ 
-                    width: '100%', background: '#0a0a0a', border: 'none', borderBottom: `1px solid ${aliasStatus === 'available' ? 'var(--accent)' : '#1a1a1a'}`,
-                    color: '#fff', fontSize: '15px', padding: '18px 20px', borderRadius: 0, outline: 'none',
+                    width: '100%', background: 'var(--background)', border: 'none', borderBottom: `1px solid ${aliasStatus === 'available' ? 'var(--accent)' : '#1a1a1a'}`,
+                    color: 'var(--foreground)', fontSize: '15px', padding: '18px 20px', borderRadius: 0, outline: 'none',
                     transition: 'border-color 0.3s'
                   }}
                 />
@@ -676,7 +676,7 @@ export default function CreateLinkModal({ onClose, onSuccess }: Props) {
                   min={new Date().toISOString().slice(0, 16)}
                   style={{ 
                     width: '100%', background: 'var(--bg)', border: 'none', borderBottom: '1px solid var(--border)', 
-                    color: '#fff', fontSize: '14px', padding: '16px 0', borderRadius: 0, colorScheme: 'dark', outline: 'none',
+                    color: 'var(--foreground)', fontSize: '14px', padding: '16px 0', borderRadius: 0, colorScheme: 'dark', outline: 'none',
                     transition: 'border-color 0.2s'
                   }}
                   onFocus={(e) => e.target.style.borderBottomColor = 'var(--accent)'}
@@ -698,7 +698,7 @@ export default function CreateLinkModal({ onClose, onSuccess }: Props) {
                   onChange={e => setLinkPassword(e.target.value)}
                   style={{ 
                     height: '52px', width: '100%', background: 'transparent', border: 'none', borderBottom: '1px solid var(--border)',
-                    color: '#fff', fontSize: '14px', padding: '16px 44px', borderRadius: 0, outline: 'none',
+                    color: 'var(--foreground)', fontSize: '14px', padding: '16px 44px', borderRadius: 0, outline: 'none',
                     transition: 'border-color 0.2s'
                   }}
                   onFocus={(e) => e.target.style.borderBottomColor = 'var(--accent)'}
@@ -707,7 +707,7 @@ export default function CreateLinkModal({ onClose, onSuccess }: Props) {
                 <button
                   type="button"
                   onClick={() => setIsPasswordVisible(!isPasswordVisible)}
-                  style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#444', cursor: 'pointer', padding: '4px' }}
+                  style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--muted-foreground)', cursor: 'pointer', padding: '4px' }}
                 >
                   {isPasswordVisible ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
@@ -728,13 +728,13 @@ export default function CreateLinkModal({ onClose, onSuccess }: Props) {
                 min="1"
                 style={{ 
                   width: '100%', background: 'var(--bg)', border: 'none', borderBottom: '1px solid var(--border)', 
-                  color: '#fff', fontSize: '14px', padding: '16px 0', borderRadius: 0, outline: 'none',
+                  color: 'var(--foreground)', fontSize: '14px', padding: '16px 0', borderRadius: 0, outline: 'none',
                   transition: 'border-color 0.2s'
                 }}
                 onFocus={(e) => e.target.style.borderBottomColor = 'var(--accent)'}
                 onBlur={(e) => e.target.style.borderBottomColor = 'var(--border)'}
               />
-              <p style={{ fontSize: '10px', color: '#444', marginTop: '8px', fontWeight: 600 }}>We'll notify you and show a celebration once this goal is reached.</p>
+              <p style={{ fontSize: '10px', color: 'var(--muted-foreground)', marginTop: '8px', fontWeight: 600 }}>We'll notify you and show a celebration once this goal is reached.</p>
             </div>
 
             {/* TAGS */}
@@ -752,7 +752,7 @@ export default function CreateLinkModal({ onClose, onSuccess }: Props) {
                       exit={{ scale: 0, opacity: 0 }}
                       transition={{ duration: 0.2 }}
                       style={{ 
-                        background: 'rgba(203,255,0,0.1)', color: 'var(--accent)', border: '1px solid rgba(203,255,0,0.3)', 
+                        background: 'rgba(255,224,194,0.1)', color: 'var(--accent)', border: '1px solid rgba(255,224,194,0.3)', 
                         padding: '4px 12px', borderRadius: '0', fontSize: '11px', fontWeight: 900, 
                         display: 'flex', alignItems: 'center', gap: '6px' 
                       }}
@@ -779,7 +779,7 @@ export default function CreateLinkModal({ onClose, onSuccess }: Props) {
                 onBlur={() => setIsTagsFocused(false)}
                 style={{ 
                   width: '100%', background: 'transparent', border: 'none', borderBottom: `1px solid ${isTagsFocused ? 'var(--accent)' : 'var(--border)'}`, 
-                  color: '#fff', fontSize: '13px', fontWeight: 700, padding: '16px 0', borderRadius: 0, outline: 'none', 
+                  color: 'var(--foreground)', fontSize: '13px', fontWeight: 700, padding: '16px 0', borderRadius: 0, outline: 'none', 
                   opacity: tags.length >= 5 ? 0.3 : 1, transition: 'all 0.2s', textTransform: 'uppercase', letterSpacing: '0.05em'
                 }}
               />

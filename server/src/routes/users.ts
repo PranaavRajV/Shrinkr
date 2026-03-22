@@ -12,15 +12,43 @@ router.use(requireAuth)
 // ─── GET /api/users/me ─────────────────────────────────────────────────────────
 router.get('/me', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const user = await User.findById(req.user!.id).select('-passwordHash').lean()
+    const user = await User.findById(req.user!.id)
+      .select('-passwordHash')
+      .populate({
+        path: 'bioLinks.urlId',
+        select: 'shortCode originalUrl ogData totalClicks isActive',
+        match: { isActive: true }
+      })
+      .lean()
     if (!user) return fail(res, 404, 'User not found', 'NOT_FOUND')
+
+    // Enrich bioLinks with populated data
+    const bioLinks = (user.bioLinks || []).map((bl: any) => ({
+      _id:            bl._id?.toString() || bl.urlId?._id?.toString() || '',
+      urlId:          bl.urlId?._id?.toString() || bl.urlId?.toString() || '',
+      shortCode:      bl.urlId?.shortCode || '',
+      originalUrl:    bl.urlId?.originalUrl || '',
+      customTitle:    bl.customTitle || '',
+      showClickCount: bl.showClickCount ?? true,
+      totalClicks:    bl.urlId?.totalClicks || 0,
+      order:          bl.order ?? 0
+    })).filter((bl: any) => bl.shortCode) // drop unpopulated (inactive/deleted)
+
     return ok(res, {
-      id:        user._id.toString(),
-      email:     user.email,
-      name:      user.name  || '',
-      avatar:    user.avatar || '',
-      bio:       user.bio   || '',
-      createdAt: user.createdAt,
+      id:             (user._id as any).toString(),
+      email:          user.email,
+      name:           user.name   || '',
+      avatar:         user.avatar || '',
+      bio:            user.bio    || '',
+      createdAt:      user.createdAt,
+      // Bio page fields
+      username:       user.username       || '',
+      bioName:        user.bioName        || '',
+      bioDescription: user.bioDescription || '',
+      bioAvatar:      user.bioAvatar      || '',
+      bioTheme:       user.bioTheme       || 'dark',
+      twoFactorEnabled: !!user.twoFactorEnabled,
+      bioLinks,
     })
   } catch (err) { next(err) }
 })

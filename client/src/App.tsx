@@ -49,20 +49,20 @@ class PageErrorBoundary extends Component<
     if (this.state.hasError) {
       return (
         <div style={{
-          minHeight: '100vh', background: '#0A0A0A',
+          minHeight: '100vh', background: 'var(--background)',
           display: 'flex', flexDirection: 'column',
           alignItems: 'center', justifyContent: 'center',
           padding: '40px', fontFamily: 'Inter, sans-serif',
         }}>
           <div style={{ fontSize: '10px', fontWeight: 900, color: 'rgba(255,255,255,0.2)', marginBottom: '16px', letterSpacing: '0.4em' }}>SYSTEM ERROR</div>
-          <div style={{ fontSize: '48px', fontWeight: 900, color: '#CBFF00', marginBottom: '16px', letterSpacing: '-0.04em' }}>CRASHED.</div>
-          <div style={{ fontSize: '14px', color: '#555', marginBottom: '40px', maxWidth: '400px', textAlign: 'center', lineHeight: 1.6 }}>
+          <div style={{ fontSize: '48px', fontWeight: 900, color: '#ffe0c2', marginBottom: '16px', letterSpacing: '-0.04em' }}>CRASHED.</div>
+          <div style={{ fontSize: '14px', color: 'var(--muted-foreground)', marginBottom: '40px', maxWidth: '400px', textAlign: 'center', lineHeight: 1.6 }}>
             {this.state.error}
           </div>
           <button
             onClick={() => window.location.href = '/'}
             style={{ 
-              background: '#fff', color: '#000', border: 'none', 
+              background: '#fff', color: 'var(--primary-foreground)', border: 'none', 
               padding: '16px 32px', fontSize: '12px', fontWeight: 900, 
               textTransform: 'uppercase', letterSpacing: '0.1em', 
               cursor: 'pointer', borderRadius: '4px'
@@ -171,9 +171,9 @@ export function App() {
             position="bottom-right"
             toastOptions={{
               style: {
-                background: '#161616',
-                color: '#FFFFFF',
-                border: '1px solid #222',
+                background: 'var(--card)',
+                color: 'var(--foreground)',
+                border: '1px solid var(--border)',
                 borderRadius: '8px',
                 fontSize: '13px',
                 fontWeight: 700,
@@ -181,8 +181,8 @@ export function App() {
                 padding: '12px 20px',
                 boxShadow: '0 10px 30px rgba(0,0,0,0.5)'
               },
-              success: { iconTheme: { primary: '#CBFF00', secondary: '#000000' }, duration: 3000 },
-              error:   { iconTheme: { primary: '#ff4444',  secondary: '#FFFFFF' }, duration: 4000 },
+              success: { iconTheme: { primary: '#ffe0c2', secondary: '#1a0e08' }, duration: 3000 },
+              error:   { iconTheme: { primary: '#f87171', secondary: '#1a0e08' }, duration: 4000 },
             }}
           />
           </NotificationProvider>

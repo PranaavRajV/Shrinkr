@@ -67,8 +67,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (res.data.data.requiresTwoFactor) {
       return res.data.data // contains tempToken
     }
-    const { accessToken, user: userData } = res.data.data
+    const { accessToken, refreshToken, user: userData } = res.data.data
     localStorage.setItem('shrinkr_token', accessToken)
+    if (refreshToken) localStorage.setItem('shrinkr_refresh', refreshToken)
+    
     setToken(accessToken)
     setUser(userData)
     // Fetch full profile after login
@@ -78,8 +80,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const register = async (email: string, password: string) => {
     const res = await api.post('/api/auth/register', { email, password })
-    const { accessToken, user: userData } = res.data.data
+    const { accessToken, refreshToken, user: userData } = res.data.data
     localStorage.setItem('shrinkr_token', accessToken)
+    if (refreshToken) localStorage.setItem('shrinkr_refresh', refreshToken)
     setToken(accessToken)
     setUser(userData)
   }
@@ -89,8 +92,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (res.data.data.requiresTwoFactor) {
       return res.data.data
     }
-    const { accessToken, user: userData } = res.data.data
+    const { accessToken, refreshToken, user: userData } = res.data.data
     localStorage.setItem('shrinkr_token', accessToken)
+    if (refreshToken) localStorage.setItem('shrinkr_refresh', refreshToken)
     setToken(accessToken)
     setUser(userData)
     return res.data.data
@@ -98,8 +102,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const verify2FA = async (tempToken: string, token: string) => {
     const res = await api.post('/api/auth/2fa/authenticate', { tempToken, token })
-    const { accessToken, user: userData } = res.data.data
+    const { accessToken, refreshToken, user: userData } = res.data.data
     localStorage.setItem('shrinkr_token', accessToken)
+    if (refreshToken) localStorage.setItem('shrinkr_refresh', refreshToken)
     setToken(accessToken)
     setUser(userData)
     api.get('/api/users/me').then(r => setUser(r.data.data)).catch(() => {})

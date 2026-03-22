@@ -33,8 +33,8 @@ export default function Sidebar({ onCreateLink }: { onCreateLink?: () => void })
     }}>
       {/* BRAND */}
       <div style={{ marginBottom: '60px', padding: '0 12px' }}>
-         <div style={{ fontSize: '24px', fontWeight: 900, fontFamily: 'Space Grotesk', color: 'var(--accent)' }}>ZURL</div>
-         <div style={{ fontSize: '10px', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em', marginTop: '4px' }}>
+         <div className="font-display" style={{ fontSize: '28px', color: 'var(--accent)', letterSpacing: '-0.02em' }}>ZURL</div>
+         <div style={{ fontSize: '10px', fontWeight: 900, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.24em', marginTop: '4px', opacity: 0.8 }}>
             PREMIUM SHORTENER
          </div>
       </div>
@@ -62,15 +62,17 @@ export default function Sidebar({ onCreateLink }: { onCreateLink?: () => void })
       {/* ACTION & HELP (Image 2 inspired footer) */}
       <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '24px' }}>
          <button
+           className="premium-gradient"
            onClick={() => onCreateLink ? onCreateLink() : navigate('/links')}
            style={{
-            background: 'var(--accent)', color: '#000',
-            border: 'none', borderRadius: 'var(--radius-full)',
-            padding: '16px', fontWeight: 800, fontSize: '12px',
+            color: 'var(--primary-foreground)',
+            border: 'none', borderRadius: 'var(--radius)',
+            padding: '18px', fontWeight: 950, fontSize: '12px',
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
-            cursor: 'pointer', boxShadow: '0 10px 20px rgba(203, 255, 0, 0.2)', width: '100%'
+            cursor: 'pointer', boxShadow: '0 10px 30px rgba(255, 224, 194, 0.2)', width: '100%',
+            textTransform: 'uppercase', letterSpacing: '0.1em'
          }}>
-            <Plus size={18} />
+            <Plus size={18} strokeWidth={3} />
             Create New Link
          </button>
 

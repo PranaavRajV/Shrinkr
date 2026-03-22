@@ -28,7 +28,7 @@ const S = {
   },
   btnPrimary: {
     background: 'linear-gradient(135deg, #B0A483 0%, #8D7F5F 100%)',
-    border: 'none', color: '#fff', fontWeight: 700, fontSize: '13px',
+    border: 'none', color: 'var(--foreground)', fontWeight: 700, fontSize: '13px',
     textTransform: 'uppercase' as const, letterSpacing: '0.05em',
     cursor: 'pointer', padding: '14px 28px', borderRadius: 'var(--radius-full)',
     display: 'flex', alignItems: 'center', gap: '10px', boxShadow: '0 4px 12px rgba(176, 164, 131, 0.2)'
@@ -104,7 +104,7 @@ export default function Profile() {
     <Layout>
       <div className="fade-in" style={{ padding: '40px' }}>
         <div style={{ marginBottom: '56px' }}>
-          <h1 style={{ fontSize: '42px', fontWeight: 900, letterSpacing: '-0.04em', color: '#fff' }}>Account Settings</h1>
+          <h1 style={{ fontSize: '42px', fontWeight: 900, letterSpacing: '-0.04em', color: 'var(--foreground)' }}>Account Settings</h1>
           <p style={{ color: 'var(--text-muted)', marginTop: '8px', fontSize: '15px', maxWidth: '600px' }}>
              Fine-tune your personal profile, manage security protocols, and configure your ZURL experience.
           </p>
@@ -143,7 +143,7 @@ export default function Profile() {
                        <Camera color="#fff" size={24} />
                     </div>
                  </div>
-                 <h2 style={{ fontSize: '22px', fontWeight: 900, color: '#fff' }}>{user.name || 'Professional Member'}</h2>
+                 <h2 style={{ fontSize: '22px', fontWeight: 900, color: 'var(--foreground)' }}>{user.name || 'Professional Member'}</h2>
                  <p style={{ color: 'var(--accent)', fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.15em', marginTop: '6px' }}>PREMIUM ACCESS</p>
                  <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginTop: '12px', opacity: 0.7 }}>{user.email}</p>
                  <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" style={{ display: 'none' }} />
@@ -188,7 +188,7 @@ export default function Profile() {
            {/* Forms */}
            <div style={{ display: 'flex', flexDirection: 'column', gap: '40px' }}>
               <div style={{ ...S.card, marginBottom: 0 }}>
-                 <h3 style={{ fontSize: '20px', fontWeight: 900, marginBottom: '36px', display: 'flex', alignItems: 'center', gap: '14px', color: '#fff' }}>
+                 <h3 style={{ fontSize: '20px', fontWeight: 900, marginBottom: '36px', display: 'flex', alignItems: 'center', gap: '14px', color: 'var(--foreground)' }}>
                     <User size={22} color="var(--accent)" />
                     Profile Identity
                  </h3>
@@ -196,7 +196,7 @@ export default function Profile() {
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '28px' }}>
                        <div>
                           <label style={S.label}><Mail size={12} /> Registered Email</label>
-                          <input style={{ ...S.input, background: '#0a0a0a', opacity: 0.5, cursor: 'not-allowed' }} value={user.email} disabled />
+                          <input style={{ ...S.input, background: 'var(--background)', opacity: 0.5, cursor: 'not-allowed' }} value={user.email} disabled />
                        </div>
                        <div>
                           <label style={S.label}><User size={12} /> Preferred Name</label>
@@ -220,7 +220,7 @@ export default function Profile() {
               </div>
 
               <div style={{ ...S.card, marginBottom: 0 }}>
-                 <h3 style={{ fontSize: '20px', fontWeight: 900, marginBottom: '36px', display: 'flex', alignItems: 'center', gap: '14px', color: '#fff' }}>
+                 <h3 style={{ fontSize: '20px', fontWeight: 900, marginBottom: '36px', display: 'flex', alignItems: 'center', gap: '14px', color: 'var(--foreground)' }}>
                     <Key size={22} color="var(--accent)" />
                     Security Access
                  </h3>
@@ -235,14 +235,14 @@ export default function Profile() {
                          <input type="password" style={S.input} value={newPw} onChange={e => setNewPw(e.target.value)} placeholder="••••••••" />
                       </div>
                     </div>
-                    <button type="submit" disabled={changingPw} style={{ ...S.btnPrimary, background: '#fff', color: '#000', width: 'fit-content', boxShadow: 'none' }}>
+                    <button type="submit" disabled={changingPw} style={{ ...S.btnPrimary, background: '#fff', color: 'var(--primary-foreground)', width: 'fit-content', boxShadow: 'none' }}>
                        {changingPw ? 'MODIFYING...' : 'Apply New Password'}
                     </button>
                  </form>
               </div>
 
               <div style={{ ...S.card, marginBottom: 0 }}>
-                 <h3 style={{ fontSize: '20px', fontWeight: 900, marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '14px', color: '#fff' }}>
+                 <h3 style={{ fontSize: '20px', fontWeight: 900, marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '14px', color: 'var(--foreground)' }}>
                     <ShieldCheck size={22} color="var(--accent)" />
                     Two-Factor Authentication
                  </h3>
@@ -251,13 +251,13 @@ export default function Profile() {
                  </p>
                  
                  {user.twoFactorEnabled ? (
-                   <div style={{ background: 'rgba(203,255,0,0.05)', border: '1px solid var(--accent)', padding: '24px', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                   <div style={{ background: 'rgba(255,224,194,0.05)', border: '1px solid var(--accent)', padding: '24px', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                        <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                           <CheckCircle2 color="#000" size={24} />
                        </div>
                        <div>
-                          <div style={{ fontSize: '15px', fontWeight: 900, color: '#fff' }}>2FA IS ENABLED</div>
+                          <div style={{ fontSize: '15px', fontWeight: 900, color: 'var(--foreground)' }}>2FA IS ENABLED</div>
                           <div style={{ fontSize: '12px', color: 'var(--accent)', fontWeight: 800 }}>SECURE ACCESS ACTIVE</div>
                        </div>
                      </div>
@@ -273,7 +273,7 @@ export default function Profile() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                          <AlertCircle color="#ffcc00" size={32} />
                          <div>
-                            <div style={{ fontSize: '15px', fontWeight: 900, color: '#fff' }}>2FA IS DISABLED</div>
+                            <div style={{ fontSize: '15px', fontWeight: 900, color: 'var(--foreground)' }}>2FA IS DISABLED</div>
                             <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>YOUR ACCOUNT IS AT RISK</div>
                          </div>
                       </div>
@@ -351,17 +351,17 @@ function TwoFactorModal({ action, onClose }: { action: 'setup' | 'disable' | nul
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.9)', backdropFilter: 'blur(10px)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
-       <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} style={{ background: '#0a0a0a', border: '1px solid #222', padding: '48px', borderRadius: '32px', maxWidth: '480px', width: '100%', textAlign: 'center' }}>
+       <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} style={{ background: 'var(--background)', border: '1px solid var(--border)', padding: '48px', borderRadius: '32px', maxWidth: '480px', width: '100%', textAlign: 'center' }}>
           
           <AnimatePresence mode="wait">
              {action === 'setup' ? (
                 <div key="setup">
                    {step === 1 && (
                       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                         <div style={{ width: 64, height: 64, background: 'rgba(203,255,0,0.1)', borderRadius: '16px', margin: '0 auto 24px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)' }}>
+                         <div style={{ width: 64, height: 64, background: 'rgba(255,224,194,0.1)', borderRadius: '16px', margin: '0 auto 24px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)' }}>
                             <QrCode size={32} />
                          </div>
-                         <h2 style={{ fontSize: '24px', fontWeight: 900, marginBottom: '12px', color: '#fff' }}>SCAN QR CODE</h2>
+                         <h2 style={{ fontSize: '24px', fontWeight: 900, marginBottom: '12px', color: 'var(--foreground)' }}>SCAN QR CODE</h2>
                          <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginBottom: '32px', lineHeight: 1.6 }}>Scan the image below with Google Authenticator or Authy to begin setup.</p>
                          
                          {setupData ? (
@@ -373,17 +373,17 @@ function TwoFactorModal({ action, onClose }: { action: 'setup' | 'disable' | nul
                    )}
                    {step === 2 && (
                       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                         <div style={{ width: 64, height: 64, background: 'rgba(203,255,0,0.1)', borderRadius: '16px', margin: '0 auto 24px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)' }}>
+                         <div style={{ width: 64, height: 64, background: 'rgba(255,224,194,0.1)', borderRadius: '16px', margin: '0 auto 24px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)' }}>
                             <ShieldCheck size={32} />
                          </div>
-                         <h2 style={{ fontSize: '24px', fontWeight: 900, marginBottom: '12px', color: '#fff' }}>VERIFY DEVICE</h2>
+                         <h2 style={{ fontSize: '24px', fontWeight: 900, marginBottom: '12px', color: 'var(--foreground)' }}>VERIFY DEVICE</h2>
                          <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginBottom: '32px' }}>Enter the 6-digit code from your app.</p>
                          
                          <input 
                             value={token} 
                             onChange={e => setToken(e.target.value.replace(/[^0-9]/g, '').slice(0,6))}
                             placeholder="000000"
-                            style={{ background: '#111', border: '1px solid #222', borderRadius: '12px', padding: '16px', color: '#fff', fontSize: '24px', fontWeight: 900, textAlign: 'center', letterSpacing: '0.4em', width: '100%', marginBottom: '24px', outline: 'none' }}
+                            style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '12px', padding: '16px', color: 'var(--foreground)', fontSize: '24px', fontWeight: 900, textAlign: 'center', letterSpacing: '0.4em', width: '100%', marginBottom: '24px', outline: 'none' }}
                          />
                          
                          <button style={{ ...S.btnPrimary, margin: '0 auto' }} disabled={token.length !== 6 || loading} onClick={handleVerify}>
@@ -393,13 +393,13 @@ function TwoFactorModal({ action, onClose }: { action: 'setup' | 'disable' | nul
                    )}
                    {step === 3 && (
                       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                         <div style={{ width: 64, height: 64, background: 'rgba(203,255,0,0.1)', borderRadius: '16px', margin: '0 auto 24px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)' }}>
+                         <div style={{ width: 64, height: 64, background: 'rgba(255,224,194,0.1)', borderRadius: '16px', margin: '0 auto 24px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)' }}>
                             <Key size={32} />
                          </div>
-                         <h2 style={{ fontSize: '24px', fontWeight: 900, marginBottom: '12px', color: '#fff' }}>BACKUP CODES</h2>
+                         <h2 style={{ fontSize: '24px', fontWeight: 900, marginBottom: '12px', color: 'var(--foreground)' }}>BACKUP CODES</h2>
                          <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginBottom: '32px' }}>Save these codes! You'll need them if you lose your phone.</p>
                          
-                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', background: '#000', padding: '16px', borderRadius: '12px', border: '1px solid #222', marginBottom: '32px' }}>
+                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', background: 'var(--background)', padding: '16px', borderRadius: '12px', border: '1px solid var(--border)', marginBottom: '32px' }}>
                             {backupCodes.map(code => (
                                <div key={code} style={{ fontFamily: 'monospace', color: 'var(--accent)', fontSize: '12px', fontWeight: 800 }}>{code}</div>
                             ))}
@@ -414,20 +414,20 @@ function TwoFactorModal({ action, onClose }: { action: 'setup' | 'disable' | nul
                    <div style={{ width: 64, height: 64, background: 'rgba(255,68,68,0.1)', borderRadius: '16px', margin: '0 auto 24px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ff4444' }}>
                       <AlertCircle size={32} />
                    </div>
-                   <h2 style={{ fontSize: '24px', fontWeight: 900, marginBottom: '12px', color: '#fff' }}>DISABLE MFA?</h2>
+                   <h2 style={{ fontSize: '24px', fontWeight: 900, marginBottom: '12px', color: 'var(--foreground)' }}>DISABLE MFA?</h2>
                    <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginBottom: '32px' }}>Enter your password and 2FA code to confirm.</p>
                    
                    <div style={{ textAlign: 'left', marginBottom: '24px' }}>
-                      <label style={{ fontSize: '10px', fontWeight: 900, color: '#555', marginBottom: '8px', display: 'block' }}>ACCOUNT PASSWORD</label>
-                      <input type="password" value={password} onChange={e => setPassword(e.target.value)} style={{ background: '#111', border: '1px solid #222', borderRadius: '12px', padding: '14px', color: '#fff', fontSize: '14px', width: '100%', marginBottom: '16px', outline: 'none' }} />
+                      <label style={{ fontSize: '10px', fontWeight: 900, color: 'var(--muted-foreground)', marginBottom: '8px', display: 'block' }}>ACCOUNT PASSWORD</label>
+                      <input type="password" value={password} onChange={e => setPassword(e.target.value)} style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '12px', padding: '14px', color: 'var(--foreground)', fontSize: '14px', width: '100%', marginBottom: '16px', outline: 'none' }} />
                       
-                      <label style={{ fontSize: '10px', fontWeight: 900, color: '#555', marginBottom: '8px', display: 'block' }}>APP CODE</label>
-                      <input value={token} onChange={e => setToken(e.target.value)} placeholder="000000" style={{ background: '#111', border: '1px solid #222', borderRadius: '12px', padding: '14px', color: '#fff', fontSize: '14px', width: '100%', outline: 'none' }} />
+                      <label style={{ fontSize: '10px', fontWeight: 900, color: 'var(--muted-foreground)', marginBottom: '8px', display: 'block' }}>APP CODE</label>
+                      <input value={token} onChange={e => setToken(e.target.value)} placeholder="000000" style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '12px', padding: '14px', color: 'var(--foreground)', fontSize: '14px', width: '100%', outline: 'none' }} />
                    </div>
                    
                    <div style={{ display: 'flex', gap: '12px' }}>
-                      <button onClick={onClose} style={{ flex: 1, background: 'transparent', border: '1px solid #222', color: '#555', borderRadius: '12px', fontWeight: 800, cursor: 'pointer', height: '48px' }}>CANCEL</button>
-                      <button onClick={handleDisable} disabled={loading} style={{ flex: 1, background: '#ff4444', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: 800, cursor: 'pointer', height: '48px' }}>
+                      <button onClick={onClose} style={{ flex: 1, background: 'transparent', border: '1px solid var(--border)', color: 'var(--muted-foreground)', borderRadius: '12px', fontWeight: 800, cursor: 'pointer', height: '48px' }}>CANCEL</button>
+                      <button onClick={handleDisable} disabled={loading} style={{ flex: 1, background: '#ff4444', color: 'var(--foreground)', border: 'none', borderRadius: '12px', fontWeight: 800, cursor: 'pointer', height: '48px' }}>
                          {loading ? 'DISABLING...' : 'CONFIRM'}
                       </button>
                    </div>

@@ -1,35 +1,156 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import api from '../lib/api'
-import { motion, useScroll, useTransform, useSpring, AnimatePresence } from 'framer-motion'
-import { 
-  Shield, Globe, Zap, 
-  ArrowRight, MousePointer2, ExternalLink,
-  Search, Lock, CheckCircle2, ChevronRight, Play, Copy,
-  BarChart2, Mouse, Sparkles, Terminal, Activity, Layers, Cpu
+import { motion, useScroll, useTransform, useSpring, AnimatePresence, useMotionValue, useReducedMotion } from 'framer-motion'
+import {
+  Shield, Globe, Zap, Copy,
+  Activity, Layers, Lock, BarChart2, ArrowRight,
+  CheckCircle2, Star, Terminal
 } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { Reveal, RevealText } from '../components/Reveal'
-import Card3D from '../components/Card3D'
-import Magnetic from '../components/Magnetic'
 import CountUp from '../components/CountUp'
+import Magnetic from '../components/Magnetic'
 
+// ─── Tiny hook: mouse parallax ───────────────────────────────────────────────
+function useMouseParallax(strength = 30) {
+  const x = useMotionValue(0)
+  const y = useMotionValue(0)
+  useEffect(() => {
+    const move = (e: MouseEvent) => {
+      const cx = window.innerWidth / 2
+      const cy = window.innerHeight / 2
+      x.set(((e.clientX - cx) / cx) * strength)
+      y.set(((e.clientY - cy) / cy) * strength)
+    }
+    window.addEventListener('mousemove', move)
+    return () => window.removeEventListener('mousemove', move)
+  }, [strength, x, y])
+  return { x, y }
+}
+
+// ─── Animated ticker strip ───────────────────────────────────────────────────
+function Ticker({ items }: { items: string[] }) {
+  const content = [...items, ...items]
+  return (
+    <div style={{ overflow: 'hidden', position: 'relative', width: '100%' }}>
+      <motion.div
+        animate={{ x: ['0%', '-50%'] }}
+        transition={{ duration: 28, ease: 'linear', repeat: Infinity }}
+        style={{ display: 'flex', gap: '0px', width: 'max-content' }}
+      >
+        {content.map((item, i) => (
+          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '20px', padding: '0 40px', whiteSpace: 'nowrap' }}>
+            <span style={{ fontSize: '13px', fontWeight: 800, letterSpacing: '0.12em', color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase' }}>{item}</span>
+            <span style={{ color: 'rgba(255,255,255,0.1)', fontSize: '20px' }}>✦</span>
+          </div>
+        ))}
+      </motion.div>
+    </div>
+  )
+}
+
+// ─── Reveal on scroll ────────────────────────────────────────────────────────
+function FadeUp({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 40 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: '-60px' }}
+      transition={{ duration: 0.7, delay, ease: [0.22, 1, 0.36, 1] }}
+    >
+      {children}
+    </motion.div>
+  )
+}
+
+// ─── Glow orb background element ────────────────────────────────────────────
+function GlowOrb({ color, size, top, left, blur = 120, opacity = 0.12 }: any) {
+  return (
+    <div style={{
+      position: 'absolute', top, left,
+      width: size, height: size,
+      borderRadius: '50%',
+      background: color,
+      filter: `blur(${blur}px)`,
+      opacity,
+      pointerEvents: 'none',
+      willChange: 'transform'
+    }} />
+  )
+}
+
+// ─── Feature card ────────────────────────────────────────────────────────────
+function FeatureCard({ icon: Icon, title, desc, accent = false, delay = 0 }: any) {
+  return (
+    <FadeUp delay={delay}>
+      <motion.div
+        whileHover={{ y: -6, scale: 1.01 }}
+        transition={{ type: 'spring', stiffness: 300, damping: 22 }}
+        style={{
+          padding: '36px',
+          borderRadius: '24px',
+          border: accent ? 'none' : '1px solid rgba(255,255,255,0.07)',
+          background: accent
+            ? 'linear-gradient(135deg, rgba(255,224,194,0.15) 0%, rgba(255,224,194,0.04) 100%)'
+            : 'rgba(255,255,255,0.025)',
+          backdropFilter: 'blur(12px)',
+          height: '100%',
+          cursor: 'default',
+          boxShadow: accent ? '0 0 40px rgba(255,224,194,0.08)' : 'none'
+        }}
+      >
+        <div style={{
+          width: '44px', height: '44px', borderRadius: '12px',
+          background: accent ? 'rgba(255,224,194,0.2)' : 'rgba(255,255,255,0.05)',
+          border: `1px solid ${accent ? 'rgba(255,224,194,0.3)' : 'rgba(255,255,255,0.08)'}`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '24px'
+        }}>
+          <Icon size={20} color={accent ? '#ffe0c2' : 'rgba(255,255,255,0.5)'} />
+        </div>
+        <h3 style={{ fontSize: '18px', fontWeight: 800, marginBottom: '12px', letterSpacing: '-0.02em', color: accent ? '#ffe0c2' : '#fff' }}>{title}</h3>
+        <p style={{ fontSize: '14px', lineHeight: 1.7, color: 'rgba(255,255,255,0.45)', fontWeight: 500 }}>{desc}</p>
+      </motion.div>
+    </FadeUp>
+  )
+}
+
+
+// ─── Main Component ───────────────────────────────────────────────────────────
 export default function Landing() {
-  const [stats, setStats] = useState<{ totalLinks: number, totalClicks: number } | null>(null)
+  const [stats, setStats] = useState<{ totalLinks: number; totalClicks: number } | null>(null)
   const [url, setUrl] = useState('')
   const [result, setResult] = useState('')
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
-  
-  const targetRef = useRef(null)
-  const { scrollYProgress } = useScroll({
-    target: targetRef,
-    offset: ["start start", "end end"]
-  })
+  const prefersReduced = useReducedMotion()
+
+  const wrapperRef = useRef<HTMLDivElement>(null)
+  const { scrollYProgress } = useScroll({ target: wrapperRef, offset: ['start start', 'end end'] })
+  const smooth = useSpring(scrollYProgress, { stiffness: 80, damping: 25, restDelta: 0.001 })
+
+  const { x: mouseX, y: mouseY } = useMouseParallax(20)
+  const slowX = useSpring(mouseX, { stiffness: 60, damping: 20 })
+  const slowY = useSpring(mouseY, { stiffness: 60, damping: 20 })
+
+  // ── All motion values must be unconditional (Rules of Hooks) ─────────────
+
+  // Scroll-driven parallax
+  const heroY     = useTransform(smooth, [0, 0.25], [0, -120])
+  const heroOp    = useTransform(smooth, [0, 0.18], [1, 0])
+  const heroScale = useTransform(smooth, [0, 0.2], [1, 0.94])
+  const bgOrbY    = useTransform(smooth, [0, 1], [0, -200])
+
+  // Floating card parallax derived from mouse — always computed, only applied when !prefersReduced
+  const card1X = useTransform(slowX, v => -v * 0.5)
+  const card1Y = useTransform(slowY, v => -v * 0.5)
+  const card2X = useTransform(slowX, v =>  v * 0.4)
+  const card2Y = useTransform(slowY, v =>  v * 0.4)
+  const card3X = useTransform(slowX, v =>  v * 0.3)
+  const card3Y = useTransform(slowY, v => -v * 0.3)
 
   useEffect(() => {
     api.get('/api/stats')
-      .then(res => setStats(res.data.data))
+      .then(r => setStats(r.data.data))
       .catch(() => {})
   }, [])
 
@@ -39,403 +160,651 @@ export default function Landing() {
     try {
       const res = await api.post('/api/urls', { originalUrl: url })
       setResult(res.data.data.url.shortUrl)
-      toast.success('LINK SHORTENED')
+      toast.success('Link shortened!')
     } catch {
-      toast.error('PLEASE SIGN IN TO SHORTEN LINKS')
+      toast.error('Please sign in to shorten links')
     } finally {
       setLoading(false)
     }
   }
 
-  // Adaptive Scroll Transforms
-  const heroY = useTransform(scrollYProgress, [0, 0.2], [0, -100])
-  const heroOpacity = useTransform(scrollYProgress, [0, 0.15], [1, 0])
-  const heroScale = useTransform(scrollYProgress, [0, 0.2], [1, 0.95])
-  
-  const bgY = useTransform(scrollYProgress, [0, 1], ["0%", "20%"])
-  const textLeft = useTransform(scrollYProgress, [0, 1], ["0%", "-50%"])
-  const textRight = useTransform(scrollYProgress, [0, 1], ["0%", "50%"])
+  const TICKER_ITEMS = [
+    'Dynamic Redirects', 'Smart Analytics', 'Custom Domains',
+    'Real-time Tracking', 'Bulletproof Security', 'QR Codes',
+    'Bulk Upload', 'API Access', 'Bio Pages', 'Edge Network'
+  ]
+
+  const FEATURES = [
+    { icon: Activity, title: 'Real-time Analytics', desc: 'Track every click, device, location, and referral source as they happen. No lag, no sampling.' },
+    { icon: Lock, title: 'Password Protection', desc: 'Gate your links with passwords and expiry dates. Full control over who sees what.' },
+    { icon: Terminal, title: 'Developer API', desc: 'REST API with webhook support, SDK integrations, and granular API key permissions.' },
+    { icon: Globe, title: 'Custom Domains', desc: 'Bring your own branded domain. Build trust with every link you share.', accent: true },
+    { icon: Shield, title: 'Security Scans', desc: 'Every link gets scanned for malware and phishing before being publishedlive.' },
+    { icon: Layers, title: 'Bulk Operations', desc: 'Upload thousands of URLs via CSV, manage them in bulk, and export results.', },
+  ]
 
   return (
-    <div ref={targetRef} style={{ background: '#070707', color: '#fff', overflowX: 'hidden' }}>
-      
-      {/* ── BACKGROUND LAYER ────────────────────────────────────────── */}
-      <div style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', opacity: 0.4 }}>
-        <motion.div 
-          style={{ 
-            height: '200%', width: '100%', 
-            backgroundImage: `radial-gradient(circle at 50% 50%, rgba(203, 255, 0, 0.05) 0%, transparent 70%), 
-                             linear-gradient(rgba(255,255,255,0.01) 1px, transparent 1px), 
-                             linear-gradient(90deg, rgba(255,255,255,0.01) 1px, transparent 1px)`,
-            backgroundSize: '100% 100%, 60px 60px, 60px 60px',
-            y: bgY
-          }} 
-        />
+    <div
+      ref={wrapperRef}
+      style={{
+        background: '#0a0a0a', color: '#fff', overflowX: 'hidden',
+        fontFamily: "'Inter', sans-serif",
+        contain: 'paint' // isolate paint to avoid full-page repaints
+      }}
+    >
+
+      {/* ── DEEP BACKGROUND ──────────────────────────────────────────── */}
+      <div style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', overflow: 'hidden' }}>
+        {/* Grain texture */}
+        <div style={{
+          position: 'absolute', inset: 0, opacity: 0.025,
+          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E")`,
+          backgroundRepeat: 'repeat',
+          backgroundSize: '256px'
+        }} />
+
+        {/* Grid lines */}
+        <div style={{
+          position: 'absolute', inset: 0, opacity: 0.04,
+          backgroundImage: `linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)`,
+          backgroundSize: '72px 72px'
+        }} />
+
+        {/* Glow orbs */}
+        <motion.div style={{ position: 'absolute', inset: 0, y: bgOrbY }}>
+          <GlowOrb color="radial-gradient(circle, #ffe0c2, transparent)" size="700px" top="-200px" left="30%" opacity={0.18} blur={180} />
+          <GlowOrb color="radial-gradient(circle, #644a40, transparent)" size="500px" top="40%" left="-10%" opacity={0.14} blur={140} />
+          <GlowOrb color="radial-gradient(circle, #ffe0c2, transparent)" size="400px" top="60%" left="70%" opacity={0.1} blur={120} />
+        </motion.div>
       </div>
 
-      {/* ── NAVBAR ──────────────────────────────────────────────────── */}
-      <nav style={{
-        backgroundColor: 'rgba(7,7,7,0.7)',
-        backdropFilter: 'blur(30px)',
-        borderBottom: '1px solid rgba(255,255,255,0.05)',
-        height: '80px',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '0 60px', position: 'fixed', top: 0, left: 0, right: 0, zIndex: 1000
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{ width: '32px', height: '32px', background: 'var(--accent)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Zap size={20} color="#000" strokeWidth={3} />
+      {/* ── NAVBAR ───────────────────────────────────────────────────── */}
+      <motion.nav
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.7, delay: 0.1 }}
+        style={{
+          position: 'fixed', top: 0, left: 0, right: 0, zIndex: 1000,
+          height: '72px',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '0 clamp(20px, 5vw, 80px)',
+          borderBottom: '1px solid rgba(255,255,255,0.06)',
+          backdropFilter: 'blur(24px)',
+          background: 'rgba(10,10,10,0.75)',
+        }}
+      >
+        {/* Logo */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{
+            width: '30px', height: '30px', borderRadius: '8px',
+            background: 'linear-gradient(135deg, #ffe0c2, #644a40)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 4px 14px rgba(255,224,194,0.3)'
+          }}>
+            <Zap size={16} color="#0a0a0a" strokeWidth={3} />
           </div>
-          <div style={{ fontSize: '22px', fontWeight: 950, fontFamily: 'Space Grotesk', letterSpacing: '-0.05em' }}>ZURL</div>
+          <span style={{ fontSize: '20px', fontWeight: 900, letterSpacing: '-0.05em', fontFamily: "'Space Grotesk', sans-serif" }}>ZURL</span>
         </div>
-        
-        <div style={{ display: 'flex', gap: '32px' }}>
-          {['PRODUCT', 'ENTERPRISE', 'PRICING', 'RESOURCES'].map(link => (
-            <Link key={link} to="/" style={{ 
-              textDecoration: 'none', color: '#888', 
-              fontSize: '11px', fontWeight: 900, letterSpacing: '0.15em',
-              transition: 'all 0.2s'
+
+        {/* Nav links */}
+        <div style={{ display: 'flex', gap: '36px' }}>
+          {['Product', 'Pricing', 'Docs', 'Blog'].map(l => (
+            <Link key={l} to="/" style={{
+              textDecoration: 'none', color: 'rgba(255,255,255,0.45)',
+              fontSize: '13px', fontWeight: 600, letterSpacing: '0.01em',
+              transition: 'color 0.2s'
             }}
-              onMouseEnter={e => e.currentTarget.style.color = 'var(--accent)'}
-              onMouseLeave={e => e.currentTarget.style.color = '#888'}
-            >
-              {link}
-            </Link>
+              onMouseEnter={e => (e.currentTarget.style.color = '#fff')}
+              onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.45)')}
+            >{l}</Link>
           ))}
         </div>
 
-        <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
-          <button 
-             onClick={() => navigate('/login')}
-             style={{ background: 'none', border: 'none', color: '#fff', fontSize: '11px', fontWeight: 900, cursor: 'pointer', letterSpacing: '0.1em' }}>
-             SIGN IN
-          </button>
+        {/* CTA */}
+        <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+          <button onClick={() => navigate('/login')} style={{
+            background: 'none', border: 'none', color: 'rgba(255,255,255,0.6)',
+            fontSize: '13px', fontWeight: 600, cursor: 'pointer', padding: '8px 16px'
+          }}>Sign In</button>
           <Magnetic>
-            <button 
-               onClick={() => navigate('/register')}
-               style={{ 
-                 background: 'var(--accent)', color: '#000', border: 'none', 
-                 padding: '12px 28px', borderRadius: '50px', 
-                 fontSize: '11px', fontWeight: 950, cursor: 'pointer',
-                 boxShadow: '0 10px 30px rgba(203, 255, 0, 0.3)'
-               }}>
-               GET STARTED — FREE
-            </button>
+            <button onClick={() => navigate('/register')} style={{
+              background: 'linear-gradient(135deg, #ffe0c2 0%, #c8967a 100%)',
+              color: '#1a0e08', border: 'none',
+              padding: '10px 22px', borderRadius: '50px',
+              fontSize: '13px', fontWeight: 800, cursor: 'pointer',
+              boxShadow: '0 6px 24px rgba(255,224,194,0.25)',
+              letterSpacing: '-0.01em'
+            }}>Get started →</button>
           </Magnetic>
         </div>
-      </nav>
+      </motion.nav>
 
-      {/* ── HERO SECTION ────────────────────────────────────────────── */}
-      <section style={{ 
-        height: '100vh', display: 'flex', flexDirection: 'column', 
-        alignItems: 'center', justifyContent: 'center', textAlign: 'center',
-        padding: '0 20px', position: 'relative'
+      {/* ── HERO ─────────────────────────────────────────────────────── */}
+      <section style={{
+        height: '100vh', minHeight: '700px',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        textAlign: 'center', position: 'relative', padding: '0 20px',
+        paddingTop: '72px'
       }}>
-        <motion.div style={{ y: heroY, opacity: heroOpacity, scale: heroScale }}>
-          <Reveal delay={0.2}>
-            <div style={{ 
-              display: 'inline-flex', alignItems: 'center', gap: '8px', 
-              background: 'rgba(203, 255, 0, 0.05)', border: '1px solid rgba(203, 255, 0, 0.2)',
-              padding: '8px 16px', borderRadius: '50px', marginBottom: '24px'
+        <motion.div style={{
+          y: prefersReduced ? 0 : heroY,
+          opacity: heroOp,
+          scale: heroScale,
+          willChange: 'transform, opacity',
+          position: 'relative', zIndex: 1
+        }}>
+
+          {/* Badge */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.85 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.6, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', marginBottom: '36px' }}
+          >
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: '8px',
+              padding: '8px 18px', borderRadius: '50px',
+              border: '1px solid rgba(255,224,194,0.2)',
+              background: 'rgba(255,224,194,0.06)',
+              backdropFilter: 'blur(10px)'
             }}>
-              <Sparkles size={14} color="var(--accent)" />
-              <span style={{ fontSize: '10px', fontWeight: 900, color: 'var(--accent)', letterSpacing: '0.1em' }}>NEXT-GEN LINK INFRASTRUCTURE</span>
+              <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#ffe0c2', boxShadow: '0 0 8px #ffe0c2', animation: 'pulse 2s infinite' }} />
+              <span style={{ fontSize: '11px', fontWeight: 800, color: '#ffe0c2', letterSpacing: '0.1em' }}>NEXT-GEN LINK INFRASTRUCTURE</span>
             </div>
-          </Reveal>
-          
-          <h1 style={{ fontSize: '100px', fontWeight: 950, letterSpacing: '-0.06em', lineHeight: 0.9, marginBottom: '24px' }}>
-            Elevate every<br />
-            <span style={{ color: 'var(--accent)' }}>connection.</span>
-          </h1>
+          </motion.div>
 
-          <Reveal delay={0.4}>
-            <p style={{ fontSize: '20px', color: '#888', maxWidth: '600px', margin: '0 auto 48px', lineHeight: 1.6, fontWeight: 500 }}>
-              Premium link shortening for world-class brands. Real-time analytics, 
-              custom domains, and bulletproof security.
-            </p>
-          </Reveal>
+          {/* Headline */}
+          <motion.h1
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.9, delay: 0.45, ease: [0.22, 1, 0.36, 1] }}
+            style={{
+              fontSize: 'clamp(52px, 9vw, 112px)',
+              fontWeight: 900,
+              lineHeight: 0.92,
+              letterSpacing: '-0.055em',
+              marginBottom: '28px',
+              fontFamily: "'Space Grotesk', sans-serif"
+            }}
+          >
+            Links that<br />
+            <span style={{
+              background: 'linear-gradient(135deg, #ffe0c2 0%, #c8967a 50%, #ffe0c2 100%)',
+              backgroundSize: '200% 100%',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+              animation: 'shimmer 4s ease infinite'
+            }}>move fast.</span>
+          </motion.h1>
 
-          <Reveal delay={0.6}>
-            <div style={{ 
-              minWidth: '600px', background: 'rgba(255,255,255,0.03)', 
-              borderRadius: '20px', border: '1px solid rgba(255,255,255,0.05)',
-              padding: '12px', display: 'flex', gap: '12px', backdropFilter: 'blur(10px)',
-              boxShadow: '0 40px 100px rgba(0,0,0,0.4)'
-            }}>
-              <input 
-                placeholder="Securely shorten your long destination URL..."
-                value={url} onChange={e => setUrl(e.target.value)}
-                style={{ flex: 1, background: 'none', border: 'none', color: '#fff', padding: '0 20px', fontSize: '16px', outline: 'none' }}
+          {/* Sub */}
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.6 }}
+            style={{
+              fontSize: 'clamp(16px, 2vw, 19px)',
+              color: 'rgba(255,255,255,0.42)',
+              maxWidth: '520px',
+              margin: '0 auto 48px',
+              lineHeight: 1.65,
+              fontWeight: 500
+            }}
+          >
+            Shorten, brand, track and secure every link you share — with sub-40ms redirects, real-time analytics, and zero compromise.
+          </motion.p>
+
+          {/* Hero Input */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.75 }}
+          >
+            <div className="hero-input-wrap">
+              <input
+                placeholder="Paste a long URL to shorten…"
+                value={url}
+                onChange={e => setUrl(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleShorten()}
+                className="hero-input"
               />
-              <button 
-                onClick={handleShorten}
-                disabled={loading}
-                style={{ background: 'var(--accent)', color: '#000', border: 'none', padding: '16px 32px', borderRadius: '14px', fontWeight: 950, fontSize: '12px', cursor: 'pointer', transition: 'transform 0.2s' }}
-                onMouseDown={e => e.currentTarget.style.transform = 'scale(0.95)'}
-                onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
-              >
-                {loading ? '...' : 'GENERATE LINK'}
+              <button onClick={handleShorten} disabled={loading} className="hero-btn">
+                {loading ? <div className="btn-spinner" /> : <>Shorten <ArrowRight size={14} /></>}
               </button>
             </div>
-            {result && (
-              <motion.div 
-                initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-                style={{ marginTop: '24px', display: 'flex', justifyContent: 'center' }}
-              >
-                 <div style={{ background: '#111', border: '1px solid var(--border)', padding: '12px 20px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <span style={{ fontSize: '14px', color: 'var(--accent)', fontWeight: 800 }}>{result}</span>
-                    <button onClick={() => { navigator.clipboard.writeText(result); toast.success('COPIED') }} style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer' }}><Copy size={16} /></button>
-                 </div>
-              </motion.div>
-            )}
-          </Reveal>
-        </motion.div>
 
-        {/* Floating Decorative Elements */}
-        <motion.div style={{ position: 'absolute', bottom: '100px', left: '100px', y: useTransform(scrollYProgress, [0, 0.5], [0, -300]), opacity: heroOpacity }}>
-           <div style={{ width: '120px', height: '120px', borderRadius: '24px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <BarChart2 size={40} color="#333" />
-           </div>
-        </motion.div>
-        <motion.div style={{ position: 'absolute', top: '20%', right: '10%', y: useTransform(scrollYProgress, [0, 0.5], [0, -200]), opacity: heroOpacity }}>
-           <div style={{ width: '80px', height: '80px', borderRadius: '20px', background: 'rgba(203, 255, 0, 0.05)', border: '1px solid rgba(203, 255, 0, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Shield size={32} color="var(--accent)" />
-           </div>
-        </motion.div>
-        
-        <motion.div 
-          style={{ position: 'absolute', bottom: '40px', left: '50%', transform: 'translateX(-50%)', opacity: heroOpacity }}
-          animate={{ y: [0, 10, 0] }}
-          transition={{ repeat: Infinity, duration: 2 }}
-        >
-          <Mouse size={32} color="#333" />
-        </motion.div>
-      </section>
+            <AnimatePresence>
+              {result && (
+                <motion.div
+                  key="result"
+                  initial={{ opacity: 0, y: 8, scale: 0.97 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  style={{ marginTop: '20px' }}
+                >
+                  <div style={{
+                    display: 'inline-flex', alignItems: 'center', gap: '12px',
+                    background: 'rgba(255,224,194,0.06)', border: '1px solid rgba(255,224,194,0.2)',
+                    padding: '12px 20px', borderRadius: '14px',
+                    backdropFilter: 'blur(10px)'
+                  }}>
+                    <span style={{ fontSize: '14px', color: '#ffe0c2', fontWeight: 700 }}>{result}</span>
+                    <button onClick={() => { navigator.clipboard.writeText(result); toast.success('Copied!') }}
+                      style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer', display: 'flex' }}>
+                      <Copy size={14} />
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
-      {/* ── PARALLAX STRIP ─────────────────────────────────────────── */}
-      <section style={{ height: '30vh', background: '#000', display: 'flex', alignItems: 'center', overflow: 'hidden', whiteSpace: 'nowrap', borderTop: '1px solid #111', borderBottom: '1px solid #111' }}>
-        <motion.div style={{ x: textLeft, display: 'flex', gap: '40px' }}>
-          {[1,2,3,4].map(i => (
-            <div key={i} style={{ fontSize: '80px', fontWeight: 950, color: '#111', WebkitTextStroke: '1px rgba(255,255,255,0.05)' }}>
-              DYNAMIC REDIRECTION — SMART ANALYTICS — CUSTOM DOMAINS — BULLETPROOF SECURITY
-            </div>
-          ))}
-        </motion.div>
-      </section>
-
-      {/* ── METRICS GRID ───────────────────────────────────────────── */}
-      <section style={{ padding: '160px 60px', position: 'relative' }}>
-         <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '60px' }}>
-            {[
-              { label: 'Links Created', value: stats?.totalLinks || 120500, icon: Layers },
-              { label: 'Total Clicks Tracked', value: stats?.totalClicks || 4500000, icon: Activity },
-              { label: 'Avg Latency', value: '0.04ms', icon: Cpu, suffix: '' }
-            ].map((m, i) => (
-              <motion.div 
-                key={i}
-                initial={{ opacity: 0, y: 40 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.2 }}
-                style={{ textAlign: 'center' }}
-              >
-                 <div style={{ width: '60px', height: '60px', background: 'rgba(255,255,255,0.03)', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
-                    <m.icon size={24} color={i === 1 ? 'var(--accent)' : '#555'} />
-                 </div>
-                 <div style={{ fontSize: '56px', fontWeight: 950, marginBottom: '8px', letterSpacing: '-0.04em' }}>
-                    {typeof m.value === 'number' ? <CountUp value={m.value} /> : m.value}
-                 </div>
-                 <div style={{ fontSize: '11px', fontWeight: 900, color: '#555', textTransform: 'uppercase', letterSpacing: '0.2em' }}>{m.label}</div>
-              </motion.div>
-            ))}
-         </div>
-      </section>
-
-      {/* ── CORE FEATURES (Bento Grid) ────────────────────────────────── */}
-      <section style={{ padding: '100px 60px 200px', maxWidth: '1440px', margin: '0 auto' }}>
-          <div style={{ marginBottom: '80px', textAlign: 'center' }}>
-            <RevealText text="The Link OS." />
-            <p style={{ color: '#555', fontSize: '15px', fontWeight: 800, letterSpacing: '0.1em', marginTop: '12px' }}>EVERYTHING YOU NEED TO MANAGE YOUR DIGITAL REACH</p>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gridAutoRows: '400px', gap: '32px' }}>
-            {/* Main Feature */}
-            <motion.div 
-              style={{ gridColumn: 'span 8', gridRow: 'span 1' }}
-              whileHover={{ y: -10 }}
+            {/* Trust line */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 1.1 }}
+              style={{ marginTop: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '20px' }}
             >
-              <div style={BENTO_STYLE}>
-                <div style={{ flex: 1 }}>
-                   <div style={{ width: '40px', height: '40px', background: 'var(--accent)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '24px' }}>
-                      <Terminal size={20} color="#000" />
-                   </div>
-                   <h3 style={{ fontSize: '32px', fontWeight: 950, marginBottom: '20px' }}>Real-time Link Mastery</h3>
-                   <p style={{ color: '#888', fontSize: '15px', lineHeight: 1.6, maxWidth: '300px' }}>
-                     Our proprietary edge-network provides sub-40ms redirection logic globally. 
-                     No lag, no downtime, just instant connection.
-                   </p>
+              {[
+                { icon: CheckCircle2, label: 'No credit card' },
+                { icon: Zap, label: 'Instant setup' },
+                { icon: Shield, label: 'SOC 2 Ready' }
+              ].map(({ icon: I, label }) => (
+                <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'rgba(255,255,255,0.3)', fontSize: '12px', fontWeight: 600 }}>
+                  <I size={13} color="rgba(255,224,194,0.5)" />
+                  {label}
                 </div>
-                <div style={{ flex: 1, position: 'relative', overflow: 'hidden', borderRadius: '24px', background: '#070707', border: '1px solid rgba(255,255,255,0.05)' }}>
-                    <motion.div 
-                      animate={{ opacity: [0.3, 0.6, 0.3] }}
-                      transition={{ duration: 4, repeat: Infinity }}
-                      style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at center, var(--accent-glow) 0%, transparent 70%)' }} 
-                    />
-                    <div style={{ padding: '32px' }}>
-                       <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
-                          <div style={{ width: '8px', height: '8px', background: '#333', borderRadius: '50%' }} />
-                          <div style={{ width: '40px', height: '8px', background: '#222', borderRadius: '4px' }} />
-                       </div>
-                       <div style={{ height: '140px', display: 'flex', alignItems: 'flex-end', gap: '12px' }}>
-                          {[40, 70, 45, 90, 65, 80, 50, 100].map((h, i) => (
-                            <motion.div 
-                              key={i} 
-                              initial={{ height: 0 }}
-                              whileInView={{ height: `${h}%` }}
-                              style={{ flex: 1, background: i === 7 ? 'var(--accent)' : '#222', borderRadius: '4px' }}
-                            />
-                          ))}
-                       </div>
-                    </div>
-                </div>
-              </div>
+              ))}
             </motion.div>
+          </motion.div>
+        </motion.div>
 
-            {/* Side Feature 1 */}
-            <motion.div style={{ gridColumn: 'span 4' }} whileHover={{ y: -10 }}>
-              <div style={{ ...BENTO_STYLE, flexDirection: 'column', background: 'var(--accent)', color: '#000', borderColor: 'transparent' }}>
-                 <Lock size={32} style={{ marginBottom: '24px' }} />
-                 <h3 style={{ fontSize: '24px', fontWeight: 950, marginBottom: '16px' }}>Zero Trust Redirects</h3>
-                 <p style={{ color: 'rgba(0,0,0,0.6)', fontSize: '14px', lineHeight: 1.6 }}>
-                   Enterprise-grade encryption on every hop. Your data and your users 
-                   are protected by the most advanced fraud prevention in the industry.
-                 </p>
-              </div>
-            </motion.div>
-
-            {/* Side Feature 2 */}
-            <motion.div style={{ gridColumn: 'span 5' }} whileHover={{ y: -10 }}>
-               <div style={{ ...BENTO_STYLE, flexDirection: 'column' }}>
-                  <Globe size={32} color="#444" style={{ marginBottom: '24px' }} />
-                  <h3 style={{ fontSize: '24px', fontWeight: 950, marginBottom: '16px' }}>Global Edge Network</h3>
-                  <p style={{ color: '#888', fontSize: '14px', lineHeight: 1.6 }}>
-                    Redirection nodes in 240+ cities worldwide ensure your 
-                    audience hits their destination instantly, regardless of location.
-                  </p>
-               </div>
-            </motion.div>
-
-            {/* Custom Domain Feature */}
-            <motion.div style={{ gridColumn: 'span 7' }} whileHover={{ y: -10 }}>
-               <div style={{ ...BENTO_STYLE, padding: 0, overflow: 'hidden' }}>
-                  <div style={{ flex: 1, padding: '48px' }}>
-                     <h3 style={{ fontSize: '30px', fontWeight: 950, marginBottom: '16px' }}>Your Brand, Your Rules</h3>
-                     <p style={{ color: '#888', fontSize: '14px', lineHeight: 1.6 }}>
-                       Connect your own domain in minutes. Professional, trusted links 
-                       proven to boost Click-Through-Rates by 40%.
-                     </p>
-                  </div>
-                  <div style={{ flex: 1, background: '#111', position: 'relative' }}>
-                     <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', rotate: '-5deg', width: '120%' }}>
-                        <div style={{ padding: '20px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '12px', whiteSpace: 'nowrap', fontSize: '18px', fontWeight: 900, color: 'var(--accent)' }}>
-                           go.brandname.com/exclusive-offer
-                        </div>
-                     </div>
-                  </div>
-               </div>
-            </motion.div>
+        {/* Floating cards — mouse parallax — rendered always, hidden when prefersReduced */}
+        <motion.div
+          style={{
+            position: 'absolute', left: '8%', bottom: '20%', zIndex: 1,
+            x: card1X, y: card1Y,
+            opacity: prefersReduced ? 0 : 1,
+            pointerEvents: prefersReduced ? 'none' : 'auto'
+          }}
+        >
+          <div style={FLOAT_CARD}>
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
+              {[...Array(5)].map((_, i) => <Star key={i} size={11} fill="#ffe0c2" color="#ffe0c2" strokeWidth={0} />)}
+            </div>
+            <div style={{ fontSize: '12px', fontWeight: 700, color: '#fff', marginBottom: '4px' }}>Blazing fast</div>
+            <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)' }}>Sub-40ms globally</div>
           </div>
+        </motion.div>
+
+        <motion.div
+          style={{
+            position: 'absolute', right: '8%', top: '22%', zIndex: 1,
+            x: card2X, y: card2Y,
+            opacity: prefersReduced ? 0 : 1,
+            pointerEvents: prefersReduced ? 'none' : 'auto'
+          }}
+        >
+          <div style={FLOAT_CARD}>
+            <BarChart2 size={20} color="#ffe0c2" style={{ marginBottom: '8px' }} />
+            <div style={{ fontSize: '12px', fontWeight: 700, color: '#fff' }}>{stats?.totalClicks?.toLocaleString() ?? '4.5M+'}</div>
+            <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)' }}>Clicks tracked</div>
+          </div>
+        </motion.div>
+
+        <motion.div
+          style={{
+            position: 'absolute', right: '12%', bottom: '22%', zIndex: 1,
+            x: card3X, y: card3Y,
+            opacity: prefersReduced ? 0 : 1,
+            pointerEvents: prefersReduced ? 'none' : 'auto'
+          }}
+        >
+          <div style={{ ...FLOAT_CARD, background: 'rgba(255,224,194,0.07)' }}>
+            <CheckCircle2 size={20} color="#ffe0c2" style={{ marginBottom: '8px' }} />
+            <div style={{ fontSize: '12px', fontWeight: 700, color: '#ffe0c2' }}>Link Active</div>
+            <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)' }}>zurl.app/launch</div>
+          </div>
+        </motion.div>
+
+        {/* Scroll indicator */}
+        <motion.div
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.5 }}
+          style={{ position: 'absolute', bottom: '36px', left: '50%', transform: 'translateX(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}
+        >
+          <motion.div
+            animate={{ y: [0, 6, 0] }}
+            transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
+            style={{ width: '26px', height: '42px', border: '1.5px solid rgba(255,255,255,0.12)', borderRadius: '13px', display: 'flex', justifyContent: 'center', paddingTop: '8px' }}
+          >
+            <div style={{ width: '4px', height: '8px', borderRadius: '2px', background: 'rgba(255,224,194,0.5)' }} />
+          </motion.div>
+        </motion.div>
       </section>
 
-      {/* ── PARALLAX CTA ────────────────────────────────────────────── */}
-      <section style={{ height: '80vh', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-         <motion.div 
-           style={{ 
-             scale: useTransform(scrollYProgress, [0.85, 1], [0.8, 1]),
-             opacity: useTransform(scrollYProgress, [0.85, 0.95], [0, 1]),
-             width: '90%', maxWidth: '1440px', height: '100%',
-             background: 'linear-gradient(135deg, #111 0%, #070707 100%)',
-             borderRadius: '60px 60px 0 0',
-             border: '1px solid rgba(255,255,255,0.05)',
-             padding: '120px 60px',
-             display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center'
-           }}
-         >
-            <RevealText text="Ready to upgrade?" />
-            <p style={{ color: '#888', fontSize: '20px', maxWidth: '600px', margin: '24px auto 48px', lineHeight: 1.6 }}>
-               Join the fastest growing companies using ZURL to power their digital growth.
-            </p>
-            <div style={{ display: 'flex', gap: '24px' }}>
-               <Magnetic>
-                 <button onClick={() => navigate('/register')} style={{ ...CTA_BTN, background: 'var(--accent)', color: '#000' }}>CREATE ACCOUNT — FREE</button>
-               </Magnetic>
-               <Magnetic>
-                 <button style={{ ...CTA_BTN, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>TALK TO SALES</button>
-               </Magnetic>
+      {/* ── TICKER STRIP ─────────────────────────────────────────────── */}
+      <div style={{
+        borderTop: '1px solid rgba(255,255,255,0.06)',
+        borderBottom: '1px solid rgba(255,255,255,0.06)',
+        padding: '22px 0',
+        background: 'rgba(255,255,255,0.018)',
+        overflow: 'hidden',
+        position: 'relative', zIndex: 1
+      }}>
+        <Ticker items={TICKER_ITEMS} />
+      </div>
+
+      {/* ── STATS SECTION ────────────────────────────────────────────── */}
+      <section style={{ padding: 'clamp(80px, 12vw, 140px) clamp(20px, 6vw, 80px)', position: 'relative', zIndex: 1 }}>
+        <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
+          <FadeUp>
+            <div style={{ textAlign: 'center', marginBottom: '80px' }}>
+              <div style={{ fontSize: '11px', fontWeight: 800, color: 'rgba(255,224,194,0.6)', letterSpacing: '0.2em', marginBottom: '16px', textTransform: 'uppercase' }}>By the numbers</div>
+              <h2 style={{ fontSize: 'clamp(32px, 5vw, 56px)', fontWeight: 900, letterSpacing: '-0.04em', lineHeight: 1.05, fontFamily: "'Space Grotesk', sans-serif" }}>
+                Built for scale.<br /><span style={{ color: 'rgba(255,255,255,0.3)' }}>Proven in production.</span>
+              </h2>
             </div>
-         </motion.div>
+          </FadeUp>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '2px', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '24px', overflow: 'hidden' }}>
+            {[
+              { label: 'Links Created', value: stats?.totalLinks ?? 120500, suffix: '+', icon: Layers },
+              { label: 'Clicks Tracked', value: stats?.totalClicks ?? 4500000, suffix: '+', icon: Activity },
+              { label: 'Avg Redirect', value: '< 40ms', icon: Zap, raw: true },
+              { label: 'Uptime SLA', value: '99.99%', icon: CheckCircle2, raw: true },
+            ].map((m, i) => (
+              <FadeUp key={i} delay={i * 0.1}>
+                <div style={{
+                  padding: '48px 36px',
+                  background: 'rgba(255,255,255,0.022)',
+                  textAlign: 'center',
+                  borderRight: i < 3 ? '1px solid rgba(255,255,255,0.06)' : 'none'
+                }}>
+                  <m.icon size={20} color="rgba(255,224,194,0.4)" style={{ marginBottom: '20px', display: 'block', margin: '0 auto 20px' }} />
+                  <div style={{ fontSize: 'clamp(36px, 5vw, 52px)', fontWeight: 900, letterSpacing: '-0.04em', marginBottom: '8px', fontFamily: "'Space Grotesk', sans-serif" }}>
+                    {m.raw ? m.value : <><CountUp value={m.value as number} />{m.suffix}</>}
+                  </div>
+                  <div style={{ fontSize: '12px', fontWeight: 700, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>{m.label}</div>
+                </div>
+              </FadeUp>
+            ))}
+          </div>
+        </div>
       </section>
 
-      {/* ── FOOTER ─────────────────────────────────────────────────── */}
-      <footer style={{ background: '#111', padding: '100px 60px' }}>
-         <div style={{ maxWidth: '1440px', margin: '0 auto' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '80px' }}>
-               <div>
-                  <div style={{ fontSize: '24px', fontWeight: 950, letterSpacing: '-0.05em', marginBottom: '12px' }}>ZURL</div>
-                  <p style={{ color: '#555', fontSize: '13px', maxWidth: '240px', lineHeight: 1.6 }}>
-                    Redefining how the world connects to information, one short link at a time.
-                  </p>
-               </div>
-               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 160px)', gap: '40px' }}>
-                  {['Product', 'Company', 'Legal'].map((group, i) => (
-                    <div key={i}>
-                       <div style={{ fontSize: '10px', fontWeight: 900, color: '#fff', letterSpacing: '0.2em', marginBottom: '24px' }}>{group.toUpperCase()}</div>
-                       <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                          {['Feature 1', 'Feature 2', 'Feature 3'].map(l => (
-                            <span key={l} style={{ fontSize: '13px', color: '#555', fontWeight: 600, cursor: 'pointer' }}>{l}</span>
-                          ))}
-                       </div>
-                    </div>
+      {/* ── FEATURES ─────────────────────────────────────────────────── */}
+      <section style={{ padding: 'clamp(80px, 12vw, 140px) clamp(20px, 6vw, 80px)', position: 'relative', zIndex: 1 }}>
+        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+          <FadeUp>
+            <div style={{ marginBottom: '72px' }}>
+              <div style={{ fontSize: '11px', fontWeight: 800, color: 'rgba(255,224,194,0.6)', letterSpacing: '0.2em', marginBottom: '16px', textTransform: 'uppercase' }}>Everything you need</div>
+              <h2 style={{ fontSize: 'clamp(32px, 5vw, 56px)', fontWeight: 900, letterSpacing: '-0.04em', lineHeight: 1.05, maxWidth: '600px', fontFamily: "'Space Grotesk', sans-serif" }}>
+                Link infrastructure for ambitious teams.
+              </h2>
+            </div>
+          </FadeUp>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px' }}>
+            {FEATURES.map((f, i) => (
+              <FeatureCard key={i} {...f} delay={i * 0.07} />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── BIG BENTO / VISUAL ───────────────────────────────────────── */}
+      <section style={{ padding: 'clamp(60px, 8vw, 100px) clamp(20px, 6vw, 80px)', position: 'relative', zIndex: 1 }}>
+        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+          <div className="bento-grid2">
+            {/* Left big card */}
+            <FadeUp>
+              <motion.div
+                whileHover={{ scale: 1.01 }}
+                transition={{ type: 'spring', stiffness: 200, damping: 20 }}
+                style={{
+                  borderRadius: '28px',
+                  border: '1px solid rgba(255,255,255,0.07)',
+                  background: 'rgba(255,255,255,0.025)',
+                  overflow: 'hidden',
+                  height: '100%',
+                  minHeight: '380px',
+                  padding: '48px',
+                  position: 'relative',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'flex-end'
+                }}
+              >
+                {/* Chart preview */}
+                <div style={{ position: 'absolute', top: '32px', right: '32px', left: '32px', height: '160px', display: 'flex', alignItems: 'flex-end', gap: '8px' }}>
+                  {[35, 55, 40, 80, 60, 90, 45, 100, 72, 85].map((h, i) => (
+                    <motion.div
+                      key={i}
+                      initial={{ height: 0 }}
+                      whileInView={{ height: `${h}%` }}
+                      viewport={{ once: true }}
+                      transition={{ duration: 0.6, delay: i * 0.06, ease: 'easeOut' }}
+                      style={{
+                        flex: 1,
+                        borderRadius: '4px 4px 0 0',
+                        background: i === 9 ? 'linear-gradient(180deg, #ffe0c2, #c8967a)' : 'rgba(255,255,255,0.06)',
+                        boxShadow: i === 9 ? '0 0 20px rgba(255,224,194,0.3)' : 'none'
+                      }}
+                    />
                   ))}
-               </div>
+                </div>
+                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(0deg, rgba(10,10,10,0.96) 40%, transparent 100%)' }} />
+                <div style={{ position: 'relative', zIndex: 1 }}>
+                  <div style={{ fontSize: '11px', fontWeight: 800, color: 'rgba(255,224,194,0.5)', letterSpacing: '0.15em', marginBottom: '12px' }}>REAL-TIME ANALYTICS</div>
+                  <h3 style={{ fontSize: 'clamp(22px, 3vw, 30px)', fontWeight: 900, letterSpacing: '-0.03em', marginBottom: '12px', fontFamily: "'Space Grotesk', sans-serif" }}>Know exactly who's clicking — and when.</h3>
+                  <p style={{ fontSize: '14px', lineHeight: 1.65, color: 'rgba(255,255,255,0.4)', maxWidth: '340px' }}>Geo, device, referrer, OS — every dimension tracked, live, with zero sampling.</p>
+                </div>
+              </motion.div>
+            </FadeUp>
+
+            {/* Right column: 2 stacked */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <FadeUp delay={0.1}>
+                <motion.div
+                  whileHover={{ scale: 1.01 }}
+                  style={{
+                    borderRadius: '24px',
+                    background: 'linear-gradient(135deg, rgba(255,224,194,0.1) 0%, rgba(100,74,64,0.06) 100%)',
+                    border: '1px solid rgba(255,224,194,0.12)',
+                    padding: '36px',
+                    boxShadow: '0 0 40px rgba(255,224,194,0.05)'
+                  }}
+                >
+                  <Lock size={28} color="#ffe0c2" style={{ marginBottom: '20px' }} />
+                  <h3 style={{ fontSize: '20px', fontWeight: 800, marginBottom: '10px', letterSpacing: '-0.02em' }}>Password-protected links</h3>
+                  <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.4)', lineHeight: 1.6 }}>Gate access with passwords, expiry timestamps, and click budgets.</p>
+                </motion.div>
+              </FadeUp>
+              <FadeUp delay={0.15}>
+                <motion.div
+                  whileHover={{ scale: 1.01 }}
+                  style={{
+                    borderRadius: '24px',
+                    border: '1px solid rgba(255,255,255,0.07)',
+                    background: 'rgba(255,255,255,0.025)',
+                    padding: '36px',
+                  }}
+                >
+                  <div style={{ display: 'flex', gap: '12px', marginBottom: '20px' }}>
+                    {['csv', 'json', 'api'].map(t => (
+                      <span key={t} style={{ padding: '4px 12px', borderRadius: '50px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', fontSize: '11px', fontWeight: 700, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{t}</span>
+                    ))}
+                  </div>
+                  <h3 style={{ fontSize: '20px', fontWeight: 800, marginBottom: '10px', letterSpacing: '-0.02em' }}>Bulk import & export</h3>
+                  <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.4)', lineHeight: 1.6 }}>Upload thousands of links via CSV or REST API. Export everything, anytime.</p>
+                </motion.div>
+              </FadeUp>
             </div>
-            <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-               <div style={{ fontSize: '12px', color: '#444', fontWeight: 600 }}>© 2026 ZURL INFRASTRUCTURE CORP.</div>
-               <div style={{ display: 'flex', gap: '24px' }}>
-                  <Globe size={18} color="#444" />
-               </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── CTA ──────────────────────────────────────────────────────── */}
+      <section style={{ padding: 'clamp(80px, 10vw, 120px) clamp(20px, 6vw, 80px)', position: 'relative', zIndex: 1 }}>
+        <FadeUp>
+          <div style={{
+            maxWidth: '1100px', margin: '0 auto',
+            borderRadius: '36px',
+            border: '1px solid rgba(255,224,194,0.12)',
+            background: 'linear-gradient(135deg, rgba(255,224,194,0.06) 0%, rgba(100,74,64,0.04) 50%, rgba(255,224,194,0.03) 100%)',
+            padding: 'clamp(60px, 8vw, 100px) clamp(32px, 6vw, 80px)',
+            textAlign: 'center',
+            position: 'relative',
+            overflow: 'hidden'
+          }}>
+            {/* Background glow inside CTA */}
+            <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 50% 110%, rgba(255,224,194,0.08) 0%, transparent 70%)', pointerEvents: 'none' }} />
+            {/* Shimmer border top */}
+            <div style={{ position: 'absolute', top: 0, left: '10%', right: '10%', height: '1px', background: 'linear-gradient(90deg, transparent, rgba(255,224,194,0.4), transparent)' }} />
+
+            <div style={{ position: 'relative', zIndex: 1 }}>
+              <div style={{ fontSize: '11px', fontWeight: 800, color: 'rgba(255,224,194,0.6)', letterSpacing: '0.2em', marginBottom: '20px', textTransform: 'uppercase' }}>Start today</div>
+              <h2 style={{ fontSize: 'clamp(36px, 6vw, 72px)', fontWeight: 900, letterSpacing: '-0.05em', lineHeight: 0.95, marginBottom: '24px', fontFamily: "'Space Grotesk', sans-serif" }}>
+                Upgrade every<br />link you share.
+              </h2>
+              <p style={{ fontSize: 'clamp(15px, 2vw, 18px)', color: 'rgba(255,255,255,0.4)', maxWidth: '480px', margin: '0 auto 48px', lineHeight: 1.6, fontWeight: 500 }}>
+                Join thousands of teams using ZURL to build smarter link experiences.
+              </p>
+              <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                <Magnetic>
+                  <button onClick={() => navigate('/register')} style={{
+                    background: 'linear-gradient(135deg, #ffe0c2 0%, #c8967a 100%)',
+                    color: '#1a0e08', border: 'none',
+                    padding: '16px 36px', borderRadius: '50px',
+                    fontSize: '14px', fontWeight: 800, cursor: 'pointer',
+                    boxShadow: '0 8px 32px rgba(255,224,194,0.25)',
+                    letterSpacing: '-0.01em', display: 'flex', alignItems: 'center', gap: '8px'
+                  }}>
+                    Start for free <ArrowRight size={16} />
+                  </button>
+                </Magnetic>
+                <Magnetic>
+                  <button onClick={() => navigate('/login')} style={{
+                    background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.7)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    padding: '16px 36px', borderRadius: '50px',
+                    fontSize: '14px', fontWeight: 700, cursor: 'pointer',
+                    backdrop: 'blur(12px)'
+                  }}>
+                    Sign in
+                  </button>
+                </Magnetic>
+              </div>
             </div>
-         </div>
+          </div>
+        </FadeUp>
+      </section>
+
+      {/* ── FOOTER ───────────────────────────────────────────────────── */}
+      <footer style={{ borderTop: '1px solid rgba(255,255,255,0.06)', padding: 'clamp(40px,6vw,60px) clamp(20px,6vw,80px)', position: 'relative', zIndex: 1 }}>
+        <div style={{ maxWidth: '1100px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '24px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{ width: '26px', height: '26px', borderRadius: '7px', background: 'linear-gradient(135deg, #ffe0c2, #644a40)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Zap size={14} color="#0a0a0a" strokeWidth={3} />
+            </div>
+            <span style={{ fontSize: '16px', fontWeight: 900, letterSpacing: '-0.04em', fontFamily: "'Space Grotesk', sans-serif" }}>ZURL</span>
+          </div>
+          <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.25)', fontWeight: 600, letterSpacing: '0.05em' }}>
+            © 2026 ZURL Infrastructure Corp.
+          </div>
+          <div style={{ display: 'flex', gap: '28px' }}>
+            {['Privacy', 'Terms', 'Status', 'Docs'].map(l => (
+              <Link key={l} to="/" style={{ textDecoration: 'none', fontSize: '12px', color: 'rgba(255,255,255,0.3)', fontWeight: 600, transition: 'color 0.2s' }}
+                onMouseEnter={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.7)')}
+                onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.3)')}
+              >{l}</Link>
+            ))}
+          </div>
+        </div>
       </footer>
 
+      {/* ── INLINE STYLES ────────────────────────────────────────────── */}
       <style>{`
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: #070707; }
-        ::-webkit-scrollbar-thumb { background: #222; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #333; }
+        @keyframes shimmer {
+          0%   { background-position: 0% 50%; }
+          50%  { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
+        }
+        @keyframes pulse {
+          0%, 100% { opacity: 1; box-shadow: 0 0 8px #ffe0c2; }
+          50% { opacity: 0.5; box-shadow: 0 0 4px #ffe0c2; }
+        }
+
+        .hero-input-wrap {
+          display: flex; gap: 8px;
+          background: rgba(255,255,255,0.04);
+          border: 1px solid rgba(255,255,255,0.09);
+          border-radius: 20px;
+          padding: 8px;
+          max-width: 580px;
+          margin: 0 auto;
+          backdrop-filter: blur(16px);
+          box-shadow: 0 24px 80px rgba(0,0,0,0.5);
+          transition: border-color 0.3s, box-shadow 0.3s;
+        }
+        .hero-input-wrap:focus-within {
+          border-color: rgba(255,224,194,0.25);
+          box-shadow: 0 0 0 4px rgba(255,224,194,0.06), 0 24px 80px rgba(0,0,0,0.5);
+        }
+        .hero-input {
+          flex: 1; background: none; border: none; outline: none;
+          color: #fff; font-size: 15px; padding: 12px 16px; font-family: inherit;
+        }
+        .hero-input::placeholder { color: rgba(255,255,255,0.28); }
+        .hero-btn {
+          background: linear-gradient(135deg, #ffe0c2 0%, #c8967a 100%);
+          color: #1a0e08; border: none;
+          padding: 12px 24px; border-radius: 14px;
+          font-size: 13px; font-weight: 800; cursor: pointer;
+          display: flex; align-items: center; gap: 8px;
+          white-space: nowrap; font-family: inherit;
+          box-shadow: 0 4px 20px rgba(255,224,194,0.2);
+          transition: box-shadow 0.2s, transform 0.15s;
+          letter-spacing: -0.01em;
+        }
+        .hero-btn:hover { box-shadow: 0 8px 32px rgba(255,224,194,0.35); transform: translateY(-1px); }
+        .hero-btn:active { transform: scale(0.97); }
+        .hero-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        .btn-spinner {
+          width: 16px; height: 16px;
+          border: 2px solid rgba(26,14,8,0.25);
+          border-top-color: #1a0e08;
+          border-radius: 50%;
+          animation: spin 0.7s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .bento-grid2 {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 16px;
+        }
+        @media (max-width: 800px) {
+          .bento-grid2 { grid-template-columns: 1fr; }
+          nav { padding: 0 20px !important; }
+          nav > div:nth-child(2) { display: none; }
+        }
+        @media (max-width: 480px) {
+          .hero-input-wrap { flex-direction: column; border-radius: 16px; }
+          .hero-btn { width: 100%; justify-content: center; }
+        }
       `}</style>
     </div>
   )
 }
 
-const BENTO_STYLE = {
-  height: '100%',
-  padding: '48px',
-  background: 'rgba(255,255,255,0.02)',
-  borderRadius: '32px',
-  border: '1px solid rgba(255,255,255,0.05)',
-  display: 'flex',
-  gap: '32px',
-  transition: 'all 0.4s cubic-bezier(0.22, 1, 0.36, 1)',
-  cursor: 'pointer'
-}
-
-const CTA_BTN = {
-  padding: '18px 48px',
-  borderRadius: '16px',
-  fontSize: '12px',
-  fontWeight: 950,
-  border: 'none',
-  cursor: 'pointer',
-  letterSpacing: '0.1em'
+const FLOAT_CARD: React.CSSProperties = {
+  padding: '20px 24px',
+  borderRadius: '18px',
+  background: 'rgba(255,255,255,0.04)',
+  border: '1px solid rgba(255,255,255,0.08)',
+  backdropFilter: 'blur(16px)',
+  boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+  minWidth: '150px'
 }

@@ -11,6 +11,7 @@ type QRModalProps = {
 
 export default function QRModal({ shortUrl, onClose }: QRModalProps) {
   useEffect(() => {
+    localStorage.setItem('shrinkr_qr_generated', 'true')
     const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', esc)
     return () => window.removeEventListener('keydown', esc)
@@ -60,7 +61,7 @@ export default function QRModal({ shortUrl, onClose }: QRModalProps) {
       ctx.drawImage(src, PAD, PAD)
 
       // Label at bottom
-      ctx.fillStyle = '#CBFF00'
+      ctx.fillStyle = '#ffe0c2'
       ctx.font = 'bold 14px Inter, system-ui, sans-serif'
       ctx.textAlign = 'center'
       ctx.fillText(`zurl.app/${code}`, out.width / 2, out.height - 18)
@@ -168,7 +169,7 @@ export default function QRModal({ shortUrl, onClose }: QRModalProps) {
         exit={{ scale: 0.95, opacity: 0 }}
         transition={{ type: 'spring', stiffness: 340, damping: 28 }}
         style={{
-          background: '#111',
+          background: 'var(--card)',
           borderRadius: '20px',
           border: '1px solid #1a1a1a',
           width: '100%', maxWidth: '380px',
@@ -183,18 +184,18 @@ export default function QRModal({ shortUrl, onClose }: QRModalProps) {
           onClick={onClose}
           style={{
             position: 'absolute', top: '16px', right: '16px',
-            background: 'none', border: '1px solid #222', borderRadius: '8px',
-            padding: '6px', color: '#555', cursor: 'pointer', display: 'flex'
+            background: 'none', border: '1px solid var(--border)', borderRadius: '8px',
+            padding: '6px', color: 'var(--muted-foreground)', cursor: 'pointer', display: 'flex'
           }}
         >
           <X size={15} />
         </button>
 
         {/* Label */}
-        <div style={{ fontSize: '10px', fontWeight: 800, color: '#CBFF00', letterSpacing: '0.2em', marginBottom: '6px' }}>
+        <div style={{ fontSize: '10px', fontWeight: 800, color: '#ffe0c2', letterSpacing: '0.2em', marginBottom: '6px' }}>
           SECURE QR CODE
         </div>
-        <div style={{ fontSize: '26px', fontWeight: 900, color: '#fff', marginBottom: '28px', letterSpacing: '-0.03em' }}>
+        <div style={{ fontSize: '26px', fontWeight: 900, color: 'var(--foreground)', marginBottom: '28px', letterSpacing: '-0.03em' }}>
           /{code}
         </div>
 
@@ -209,10 +210,10 @@ export default function QRModal({ shortUrl, onClose }: QRModalProps) {
         }}>
           {/* Corner accents */}
           {[
-            { top: '-2px', left: '-2px', borderTop: '3px solid #CBFF00', borderLeft: '3px solid #CBFF00' },
-            { top: '-2px', right: '-2px', borderTop: '3px solid #CBFF00', borderRight: '3px solid #CBFF00' },
-            { bottom: '-2px', left: '-2px', borderBottom: '3px solid #CBFF00', borderLeft: '3px solid #CBFF00' },
-            { bottom: '-2px', right: '-2px', borderBottom: '3px solid #CBFF00', borderRight: '3px solid #CBFF00' },
+            { top: '-2px', left: '-2px', borderTop: '3px solid #ffe0c2', borderLeft: '3px solid #ffe0c2' },
+            { top: '-2px', right: '-2px', borderTop: '3px solid #ffe0c2', borderRight: '3px solid #ffe0c2' },
+            { bottom: '-2px', left: '-2px', borderBottom: '3px solid #ffe0c2', borderLeft: '3px solid #ffe0c2' },
+            { bottom: '-2px', right: '-2px', borderBottom: '3px solid #ffe0c2', borderRight: '3px solid #ffe0c2' },
           ].map((s, i) => (
             <div key={i} style={{ position: 'absolute', width: '16px', height: '16px', borderRadius: '2px', ...s }} />
           ))}
@@ -229,7 +230,7 @@ export default function QRModal({ shortUrl, onClose }: QRModalProps) {
 
         {/* URL label */}
         <div style={{
-          fontSize: '11px', color: '#444', marginBottom: '24px',
+          fontSize: '11px', color: 'var(--muted-foreground)', marginBottom: '24px',
           textAlign: 'center', maxWidth: '280px',
           wordBreak: 'break-all', lineHeight: 1.5
         }}>
@@ -240,7 +241,7 @@ export default function QRModal({ shortUrl, onClose }: QRModalProps) {
         <a
           href={shortUrl} target="_blank" rel="noreferrer"
           style={{
-            fontSize: '11px', color: '#555', marginBottom: '20px',
+            fontSize: '11px', color: 'var(--muted-foreground)', marginBottom: '20px',
             display: 'flex', alignItems: 'center', gap: '4px', textDecoration: 'none',
             fontWeight: 700
           }}
@@ -255,7 +256,7 @@ export default function QRModal({ shortUrl, onClose }: QRModalProps) {
             disabled={downloading}
             style={{
               height: '52px', width: '100%',
-              background: downloading ? '#1a1a1a' : '#CBFF00',
+              background: downloading ? '#1a1a1a' : '#ffe0c2',
               border: 'none',
               color: downloading ? '#444' : '#000',
               fontWeight: 900, fontSize: '13px', textTransform: 'uppercase',
@@ -275,7 +276,7 @@ export default function QRModal({ shortUrl, onClose }: QRModalProps) {
               style={{
                 height: '52px',
                 background: '#1a1a1a',
-                border: '1px solid #222',
+                border: '1px solid var(--border)',
                 color: '#aaa',
                 fontWeight: 800, fontSize: '13px', textTransform: 'uppercase',
                 cursor: 'pointer',
@@ -290,9 +291,9 @@ export default function QRModal({ shortUrl, onClose }: QRModalProps) {
               onClick={copyLink}
               style={{
                 height: '52px',
-                background: copied ? 'rgba(203,255,0,0.1)' : '#1a1a1a',
-                border: `1px solid ${copied ? 'rgba(203,255,0,0.3)' : '#222'}`,
-                color: copied ? '#CBFF00' : '#aaa',
+                background: copied ? 'rgba(255,224,194,0.1)' : '#1a1a1a',
+                border: `1px solid ${copied ? 'rgba(255,224,194,0.3)' : '#222'}`,
+                color: copied ? '#ffe0c2' : '#aaa',
                 fontWeight: 800, fontSize: '13px', textTransform: 'uppercase',
                 cursor: 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',

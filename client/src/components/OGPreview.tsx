@@ -40,7 +40,7 @@ export default function OGPreview({ data, loading, onClose }: Props) {
         style={{ 
           position: 'absolute', top: '12px', right: '12px', zIndex: 10,
           background: 'rgba(0,0,0,0.5)', border: 'none', borderRadius: '50%',
-          padding: '4px', cursor: 'pointer', color: '#fff'
+          padding: '4px', cursor: 'pointer', color: 'var(--foreground)'
         }}
       >
         <X size={14} />
@@ -83,11 +83,11 @@ export default function OGPreview({ data, loading, onClose }: Props) {
         ) : data ? (
           <div style={{ maxWidth: '400px', margin: '0 auto' }}>
             {platform === 'x' && (
-              <div style={{ background: '#000', border: '1px solid #333', borderRadius: '12px', overflow: 'hidden' }}>
+              <div style={{ background: 'var(--background)', border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden' }}>
                 {data.image ? (
                   <img src={data.image} alt="" style={{ width: '100%', height: '200px', objectFit: 'cover' }} />
                 ) : (
-                  <div style={{ width: '100%', height: '200px', background: '#111', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{ width: '100%', height: '200px', background: 'var(--card)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <Globe size={40} color="#222" />
                   </div>
                 )}
@@ -114,7 +114,7 @@ export default function OGPreview({ data, loading, onClose }: Props) {
               <div style={{ background: '#fff', border: '1px solid #e0e0e0', borderRadius: '8px', overflow: 'hidden' }}>
                 {data.image && <img src={data.image} alt="" style={{ width: '100%', height: '200px', objectFit: 'cover' }} />}
                 <div style={{ padding: '12px' }}>
-                  <div style={{ fontSize: '14px', fontWeight: 600, color: '#000', marginBottom: '4px' }}>{data.title}</div>
+                  <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--primary-foreground)', marginBottom: '4px' }}>{data.title}</div>
                   <div style={{ fontSize: '12px', color: 'rgba(0,0,0,0.6)', textTransform: 'uppercase', letterSpacing: '0.02em' }}>{new URL(data.siteName || 'https://link.com').hostname}</div>
                 </div>
               </div>

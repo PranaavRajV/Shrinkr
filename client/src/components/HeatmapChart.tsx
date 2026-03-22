@@ -12,7 +12,7 @@ export default function AnalyticsHeatmap({ hourData, dayData }: HeatmapProps) {
   const getIntensity = (count: number) => {
     if (count === 0) return 'rgba(255,255,255,0.03)'
     const ratio = count / maxCount
-    return `rgba(203, 255, 0, ${0.1 + ratio * 0.9})`
+    return `rgba(255, 224, 194, ${0.1 + ratio * 0.9})`
   }
 
   // Find peak hour
@@ -46,7 +46,7 @@ export default function AnalyticsHeatmap({ hourData, dayData }: HeatmapProps) {
                 height: '60px',
                 background: getIntensity(h.count),
                 borderRadius: '12px',
-                border: h.count > 0 ? '1px solid rgba(203,255,0,0.2)' : '1px solid transparent',
+                border: h.count > 0 ? '1px solid rgba(255,224,194,0.2)' : '1px solid transparent',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
@@ -76,7 +76,7 @@ export default function AnalyticsHeatmap({ hourData, dayData }: HeatmapProps) {
 
       {/* INSIGHTS PANEL */}
       <aside style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-         <div style={{ background: '#0A0A0A', borderRadius: '24px', padding: '24px', border: '1px solid var(--border)', flex: 1 }}>
+         <div style={{ background: 'var(--background)', borderRadius: '24px', padding: '24px', border: '1px solid var(--border)', flex: 1 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
                <TrendingUp size={18} color="var(--accent)" />
                <h4 style={{ fontSize: '14px', fontWeight: 900 }}>PEAK INSIGHTS</h4>
@@ -84,19 +84,19 @@ export default function AnalyticsHeatmap({ hourData, dayData }: HeatmapProps) {
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
                <div>
-                  <div style={{ fontSize: '10px', fontWeight: 900, color: '#555', marginBottom: '8px', textTransform: 'uppercase' }}>Best Engagement Time</div>
+                  <div style={{ fontSize: '10px', fontWeight: 900, color: 'var(--muted-foreground)', marginBottom: '8px', textTransform: 'uppercase' }}>Best Engagement Time</div>
                   <div style={{ fontSize: '24px', fontWeight: 900, color: 'var(--accent)', letterSpacing: '-0.02em' }}>
-                    {peakHour.hour}:00 <span style={{ fontSize: '12px', color: '#fff' }}>({peakHour.count} Clks)</span>
+                    {peakHour.hour}:00 <span style={{ fontSize: '12px', color: 'var(--foreground)' }}>({peakHour.count} Clks)</span>
                   </div>
-                  <p style={{ fontSize: '11px', color: '#555', marginTop: '8px', lineHeight: 1.5 }}>Schedule your next social post around this time for maximum ROI.</p>
+                  <p style={{ fontSize: '11px', color: 'var(--muted-foreground)', marginTop: '8px', lineHeight: 1.5 }}>Schedule your next social post around this time for maximum ROI.</p>
                </div>
 
                <div>
-                  <div style={{ fontSize: '10px', fontWeight: 900, color: '#555', marginBottom: '8px', textTransform: 'uppercase' }}>Busiest Day Of Week</div>
+                  <div style={{ fontSize: '10px', fontWeight: 900, color: 'var(--muted-foreground)', marginBottom: '8px', textTransform: 'uppercase' }}>Busiest Day Of Week</div>
                   <div style={{ fontSize: '24px', fontWeight: 900, color: 'var(--accent)', letterSpacing: '-0.02em' }}>
-                    {peakDay.day} <span style={{ fontSize: '12px', color: '#fff' }}>({peakDay.count} Clks)</span>
+                    {peakDay.day} <span style={{ fontSize: '12px', color: 'var(--foreground)' }}>({peakDay.count} Clks)</span>
                   </div>
-                  <p style={{ fontSize: '11px', color: '#555', marginTop: '8px', lineHeight: 1.5 }}>Your audience is most active on <b>{peakDay.day}s</b>. Focus your marketing campaigns here.</p>
+                  <p style={{ fontSize: '11px', color: 'var(--muted-foreground)', marginTop: '8px', lineHeight: 1.5 }}>Your audience is most active on <b>{peakDay.day}s</b>. Focus your marketing campaigns here.</p>
                </div>
             </div>
          </div>
@@ -106,8 +106,8 @@ export default function AnalyticsHeatmap({ hourData, dayData }: HeatmapProps) {
                <MousePointer2 size={24} color="#555" />
             </div>
             <div>
-               <div style={{ fontSize: '10px', fontWeight: 900, color: '#555', marginBottom: '4px' }}>AVG. CONVERSION</div>
-               <div style={{ fontSize: '20px', fontWeight: 900, color: '#fff' }}>{((peakHour.count / (maxCount * 24)) * 100).toFixed(1)}%</div>
+               <div style={{ fontSize: '10px', fontWeight: 900, color: 'var(--muted-foreground)', marginBottom: '4px' }}>AVG. CONVERSION</div>
+               <div style={{ fontSize: '20px', fontWeight: 900, color: 'var(--foreground)' }}>{((peakHour.count / (maxCount * 24)) * 100).toFixed(1)}%</div>
             </div>
          </div>
       </aside>

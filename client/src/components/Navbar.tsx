@@ -42,7 +42,7 @@ export function Navbar({ pageTitle }: { pageTitle?: string }) {
           fontWeight: 700,
           letterSpacing: '0.2em',
           textTransform: 'uppercase',
-          color: '#555',
+          color: 'var(--muted-foreground)',
         }}>
           {pageTitle}
         </span>
@@ -165,7 +165,7 @@ export function Navbar({ pageTitle }: { pageTitle?: string }) {
             <button onClick={() => navigate('/register')} style={{
               background: '#DFE104',
               border: 'none',
-              color: '#000',
+              color: 'var(--primary-foreground)',
               padding: '8px 16px',
               fontSize: '11px',
               fontWeight: 700,

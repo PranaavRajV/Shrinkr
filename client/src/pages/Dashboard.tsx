@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { useAuth } from '../contexts/AuthContext'
 import { AnimatePresence, motion } from 'framer-motion'
 import { 
   Link2, MousePointer2, Plus, Copy, Trash2,
@@ -28,6 +29,7 @@ import CountUp from '../components/CountUp'
 import confetti from 'canvas-confetti'
 
 export default function Dashboard() {
+  const { user } = useAuth()
   const [urls, setUrls] = useState<any[]>([])
   const [stats, setStats] = useState({ totalLinks: 0, totalClicks: 0 })
   const [loading, setLoading] = useState(true)
@@ -45,6 +47,12 @@ export default function Dashboard() {
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [filterTag, setFilterTag] = useState<string | null>(null)
   const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search), 300)
+    return () => clearTimeout(timer)
+  }, [search])
   const [recentSearches, setRecentSearches] = useState<string[]>([])
   const [showRecent, setShowRecent] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -88,12 +96,13 @@ export default function Dashboard() {
       return next
     })
     setCheckingHealth(false)
+    toast.success('MONITORING SYNC COMPLETE ✓')
   }, [])
 
   const fetchData = useCallback(async () => {
     try {
       const [uRes, sRes] = await Promise.all([
-        api.get('/api/urls', { params: { tag: filterTag } }),
+        api.get('/api/urls', { params: { tag: filterTag, search: debouncedSearch || undefined, limit: 100 } }),
         api.get('/api/users/me/stats')
       ])
       const fetchedUrls = uRes.data.data.urls || []
@@ -131,7 +140,7 @@ export default function Dashboard() {
     } finally {
       setLoading(false)
     }
-  }, [filterTag, checkAllHealth])
+  }, [filterTag, debouncedSearch, checkAllHealth])
 
   const sortUrls = (urls: any[], sortType: string) => {
     const sorted = [...urls]
@@ -157,13 +166,9 @@ export default function Dashboard() {
   }
 
   const filteredUrls = sortUrls(urls.filter(url => {
-    const matchSearch = !search ||
-      url.originalUrl.toLowerCase().includes(search.toLowerCase()) ||
-      url.shortCode.toLowerCase().includes(search.toLowerCase()) ||
-      (url.ogData?.title && url.ogData.title.toLowerCase().includes(search.toLowerCase()))
     const matchTag = !filterTag || url.tags?.includes(filterTag)
     const matchPin = !pinFilter || url.isPinned
-    return matchSearch && matchTag && matchPin
+    return matchTag && matchPin
   }), sort)
 
   const pinnedUrls = filteredUrls.filter(u => u.isPinned)
@@ -290,7 +295,7 @@ export default function Dashboard() {
       exit={{ opacity: 0 }} 
       style={{ 
         borderBottom: '1px solid var(--border)', 
-        background: selected.includes(u.shortCode) ? 'rgba(203,255,0,0.03)' : 'none', 
+        background: selected.includes(u.shortCode) ? 'rgba(255,224,194,0.03)' : 'none', 
         borderLeft: selected.includes(u.shortCode) ? '4px solid var(--accent)' : isPinned ? '2px solid var(--accent)' : 'none',
         position: 'relative'
       }}
@@ -301,7 +306,7 @@ export default function Dashboard() {
             <input type="checkbox" checked={selected.includes(u.shortCode)} onChange={() => setSelected(prev => prev.includes(u.shortCode) ? prev.filter(s => s !== u.shortCode) : [...prev, u.shortCode])} style={{ accentColor: 'var(--accent)', cursor: 'pointer' }} />
           ) : u.ogData?.favicon ? (<img src={u.ogData.favicon} style={{ width: '16px', height: '16px' }} />) : (<Globe size={14} color="var(--text-muted)" />)}
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <a href={u.shortUrl} target="_blank" rel="noreferrer" style={{ color: '#fff', textDecoration: 'none', fontWeight: 800 }}>{baseUrl}/{u.shortCode}</a>
+            <a href={u.shortUrl} target="_blank" rel="noreferrer" style={{ color: 'var(--foreground)', textDecoration: 'none', fontWeight: 800 }}>{baseUrl}/{u.shortCode}</a>
             {u.linkPassword && (
               <div style={{ position: 'relative' }} className="lock-tooltip-trigger">
                 <Lock size={12} color="var(--accent)" />
@@ -339,14 +344,14 @@ export default function Dashboard() {
       </td>
       <td style={{ padding: '20px' }}>
         <div style={{ maxWidth: '280px' }}>
-          <div style={{ color: '#fff', fontSize: '13px', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.ogData?.title || u.originalUrl}</div>
+          <div style={{ color: 'var(--foreground)', fontSize: '13px', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.ogData?.title || u.originalUrl}</div>
           {u.clickGoal && (
             <div style={{ marginTop: '12px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '9px', fontWeight: 900, letterSpacing: '0.1em' }}>
                 <span style={{ color: 'var(--text-muted)' }}>{u.totalClicks} / {u.clickGoal} CLICKS</span>
                 <span style={{ color: u.totalClicks >= u.clickGoal ? 'var(--accent)' : 'var(--accent)' }}>{Math.floor(Math.min((u.totalClicks / u.clickGoal) * 100, 100))}%</span>
               </div>
-              <div style={{ height: '2px', background: '#222', borderRadius: 0, overflow: 'hidden' }}>
+              <div style={{ height: '2px', background: 'var(--muted)', borderRadius: 0, overflow: 'hidden' }}>
                 <motion.div 
                   initial={{ width: 0 }} 
                   animate={{ width: `${Math.min((u.totalClicks / u.clickGoal) * 100, 100)}%` }} 
@@ -365,14 +370,14 @@ export default function Dashboard() {
       <td style={{ padding: '20px' }}>
         {(() => {
           const status = healthStatus[u.shortCode]
-          const color = !status ? '#333' : status.healthy ? '#CBFF00' : '#ff4444'
-          return (<div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><div style={{ width: '8px', height: '8px', borderRadius: '50%', background: color }} /><span style={{ fontSize: '10px', fontWeight: 900, color: 'var(--text-muted)' }}>{!status ? '—' : status.healthy ? 'UP' : 'DOWN'}</span></div>)
+          const color = !status ? '#333' : status.healthy ? '#ffe0c2' : '#ff4444'
+          return (<div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><div style={{ width: '8px', height: '8px', borderRadius: '50%', background: color, boxShadow: status?.healthy ? '0 0 10px rgba(255, 224, 194, 0.4)' : 'none' }} /><span style={{ fontSize: '10px', fontWeight: 900, color: status?.healthy ? 'var(--accent)' : 'var(--text-muted)' }}>{!status ? 'WAIT' : status.healthy ? 'STABLE' : 'OFFLINE'}</span></div>)
         })()}
       </td>
       <td style={{ padding: '20px' }}>
         {(() => {
           const status = u.expiresAt ? getExpiryStatus(u.expiresAt) : { label: 'ACTIVE', level: 'normal' }
-          return (<span style={{ fontSize: '10px', fontWeight: 900, padding: '3px 8px', borderRadius: '4px', background: status.level === 'danger' ? 'rgba(255,68,68,0.1)' : 'rgba(203,255,0,0.1)', color: status.level === 'danger' ? '#ff4444' : '#CBFF00' }}>{status.label}</span>)
+          return (<span style={{ fontSize: '10px', fontWeight: 900, padding: '3px 8px', borderRadius: '4px', background: status.level === 'danger' ? 'rgba(255,68,68,0.1)' : 'rgba(255,224,194,0.1)', color: status.level === 'danger' ? '#ff4444' : '#ffe0c2' }}>{status.label}</span>)
         })()}
       </td>
       <td style={{ padding: '20px' }}><div style={{ fontSize: '13px', fontWeight: 800 }}><CountUp value={u.totalClicks || 0} /></div></td>
@@ -395,7 +400,7 @@ export default function Dashboard() {
                     { id: 'html', label: 'HTML', desc: 'Anchor tag' },
                     { id: 'original', label: 'Original URL', desc: 'Destination link' }
                   ].map(opt => (
-                    <button key={opt.id} onClick={() => handleCopy(u, opt.id as any)} className="dropdown-item" style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', padding: '10px 12px', borderRadius: '8px', cursor: 'pointer', color: '#fff', fontSize: '12px', fontWeight: 600, transition: 'all 0.2s' }}>
+                    <button key={opt.id} onClick={() => handleCopy(u, opt.id as any)} className="dropdown-item" style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', padding: '10px 12px', borderRadius: '8px', cursor: 'pointer', color: 'var(--foreground)', fontSize: '12px', fontWeight: 600, transition: 'all 0.2s' }}>
                       <div style={{ fontWeight: 800 }}>{opt.label}</div>
                       <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{opt.desc}</div>
                     </button>
@@ -418,7 +423,7 @@ export default function Dashboard() {
         {showFirstLinkBanner && (
           <motion.div 
             initial={{ y: -100 }} animate={{ y: 0 }} exit={{ y: -100 }}
-            style={{ position: 'sticky', top: 0, zIndex: 1000, background: 'var(--accent)', color: '#000', padding: '16px 40px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontWeight: 900, boxShadow: '0 10px 30px rgba(0,0,0,0.5)' }}
+            style={{ position: 'sticky', top: 0, zIndex: 1000, background: 'var(--accent)', color: 'var(--primary-foreground)', padding: '16px 40px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontWeight: 900, boxShadow: '0 10px 30px rgba(0,0,0,0.5)' }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
               <Sparkles size={20} />
@@ -427,7 +432,7 @@ export default function Dashboard() {
                 <div style={{ fontSize: '11px', opacity: 0.7 }}>Share it with the world</div>
               </div>
             </div>
-            <button onClick={() => setShowFirstLinkBanner(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#000' }}><X size={20} /></button>
+            <button onClick={() => setShowFirstLinkBanner(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--primary-foreground)' }}><X size={20} /></button>
             <motion.div initial={{ scaleX: 1 }} animate={{ scaleX: 0 }} transition={{ duration: 5, ease: 'linear' }} style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '4px', background: 'rgba(0,0,0,0.2)', transformOrigin: 'left' }} />
           </motion.div>
         )}
@@ -436,23 +441,42 @@ export default function Dashboard() {
       <div style={{ padding: '40px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '48px' }}>
           <div>
-            <RevealText text="Performance Snapshot" />
-            <Reveal delay={0.2}><p style={{ color: 'var(--text-muted)', fontSize: '15px', marginTop: '4px' }}>Your ecosystem overview for the last 30 days.</p></Reveal>
+            <h1 className="font-display" style={{ fontSize: '42px', color: '#fff', letterSpacing: '-0.04em' }}>Performance Snapshot</h1>
+            <Reveal delay={0.2}><p style={{ color: 'var(--text-muted)', fontSize: '16px', marginTop: '6px', fontWeight: 500 }}>Your ecosystem overview for the last 30 days.</p></Reveal>
           </div>
           <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
             <Reveal delay={0.3} direction="down"><Magnetic><button onClick={handleExport} disabled={exporting} style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--text-muted)', border: '1px solid var(--border)', padding: '12px 20px', borderRadius: 'var(--radius-full)', fontSize: '11px', fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.2s', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{exporting ? <Loader2 size={14} className="animate-spin" /> : <Copy size={14} />}{exporting ? 'Exporting...' : 'Export CSV'}</button></Magnetic></Reveal>
             <Reveal delay={0.4} direction="down"><Magnetic><button onClick={() => checkAllHealth(urls)} disabled={checkingHealth} style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--text-muted)', border: '1px solid var(--border)', padding: '12px 20px', borderRadius: 'var(--radius-full)', fontSize: '11px', fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.2s', textTransform: 'uppercase', letterSpacing: '0.05em' }}><Activity size={14} className={checkingHealth ? 'animate-pulse' : ''} color={checkingHealth ? 'var(--accent)' : 'inherit'} />{checkingHealth ? 'Monitoring...' : 'Check Health'}</button></Magnetic></Reveal>
-            <Reveal delay={0.5} direction="down"><Magnetic><button onClick={() => setShowCreate(true)} style={{ background: 'var(--accent)', color: '#000', border: 'none', padding: '12px 24px', borderRadius: 'var(--radius-full)', fontSize: '12px', fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}><Plus size={16} /> New Link</button></Magnetic></Reveal>
+            <Reveal delay={0.5} direction="down"><Magnetic><button className="premium-gradient" onClick={() => setShowCreate(true)} style={{ color: '#000', border: 'none', padding: '14px 28px', borderRadius: 'var(--radius)', fontSize: '12px', fontWeight: 950, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', textTransform: 'uppercase', letterSpacing: '0.1em', boxShadow: '0 10px 30px rgba(255, 224, 194, 0.2)' }}><Plus size={16} strokeWidth={3} /> New Link</button></Magnetic></Reveal>
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.5fr', gap: '24px', marginBottom: '48px' }} >
-          <Card3D><div className="neo-card" style={{ padding: '32px', height: '100%' }}><div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '20px' }}>TOTAL LINKS</div><div style={{ display: 'flex', alignItems: 'baseline', gap: '12px' }}><div style={{ fontSize: '48px', fontWeight: 900 }}>{loading ? '—' : <CountUp value={stats.totalLinks} />}</div><div style={{ fontSize: '14px', color: 'var(--accent)', fontWeight: 700 }}><TrendingUp size={14} /></div></div></div></Card3D>
-          <Card3D><div className="neo-card" style={{ padding: '32px', height: '100%' }}><div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '20px' }}>TOTAL CLICKS</div><div style={{ display: 'flex', alignItems: 'baseline', gap: '12px' }}><div style={{ fontSize: '48px', fontWeight: 900 }}>{loading ? '—' : <CountUp value={stats.totalClicks} />}</div><div style={{ fontSize: '14px', color: 'var(--accent)', fontWeight: 700 }}><TrendingUp size={14} /></div></div></div></Card3D>
-          <Card3D><div style={{ background: 'linear-gradient(135deg, #1A1A1A 0%, #111 100%)', border: '2px solid var(--accent)', borderRadius: 'var(--radius-lg)', padding: '32px', position: 'relative', height: '100%' }}><div style={{ position: 'absolute', top: '24px', right: '24px', color: 'var(--accent)' }}><Star size={24} fill="var(--accent)" /></div><div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '20px' }}>TOP PERFORMING</div>{topLink ? (<><div style={{ fontSize: '22px', fontWeight: 900, marginBottom: '8px', color: '#fff' }}>{baseUrl}/{topLink.shortCode}</div><div style={{ fontSize: '13px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '12px' }}>→ {topLink.originalUrl}</div><div style={{ fontSize: '28px', fontWeight: 900, color: 'var(--accent)' }}><CountUp value={topLink.totalClicks || 0} /> <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>clicks</span></div></>) : <div style={{ fontSize: '14px', color: 'var(--text-muted)', fontStyle: 'italic' }}>No data...</div>}</div></Card3D>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '24px', marginBottom: '48px' }}>
+          {[
+            { label: 'Ecosystem Reach', value: stats.totalClicks, icon: MousePointer2, trend: '+12.5%', color: 'var(--accent)' },
+            { label: 'Network Entities', value: stats.totalLinks, icon: Link2, trend: '+3', color: '#fff' },
+            { label: 'Peak Performance', value: topLink?.totalClicks || 0, icon: TrendingUp, trend: 'Top Tier', color: '#fff' },
+            { label: 'Global Availability', value: '100%', icon: Globe, trend: 'STABLE', color: '#ffe0c2' }
+          ].map((s, i) => (
+            <Reveal key={i} delay={i * 0.1}>
+              <div className="neo-card" style={{ padding: '32px', background: 'rgba(255,255,255,0.02)', height: '100%', minHeight: '200px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
+                  <div style={{ width: '44px', height: '44px', borderRadius: '14px', background: i === 0 || i === 3 ? 'rgba(255, 224, 194, 0.1)' : 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <s.icon size={22} color={s.color} strokeWidth={2.5} />
+                  </div>
+                  <span style={{ fontSize: '10px', fontWeight: 950, color: i === 0 ? 'var(--accent)' : 'var(--text-muted)', letterSpacing: '0.12em', background: i === 0 ? 'rgba(255, 224, 194, 0.05)' : 'none', padding: '4px 10px', borderRadius: '20px' }}>{s.trend}</span>
+                </div>
+                <div style={{ fontSize: '11px', fontWeight: 900, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.18em', marginBottom: '8px', opacity: 0.7 }}>{s.label}</div>
+                <div className="font-display" style={{ fontSize: '42px', color: '#fff', letterSpacing: '-0.02em' }}>
+                  {loading ? '—' : <CountUp value={typeof s.value === 'string' ? 100 : s.value} />}
+                  {typeof s.value === 'string' ? '%' : ''}
+                </div>
+              </div>
+            </Reveal>
+          ))}
         </div>
 
-        <OnboardingChecklist urls={urls} />
+        <OnboardingChecklist urls={urls} user={user} />
 
         <div className="neo-card" style={{ padding: '0', overflow: 'hidden' }}>
           <div style={{ padding: '32px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -474,7 +498,7 @@ export default function Dashboard() {
                       localStorage.setItem('shrinkr_recent_searches', JSON.stringify(updated))
                     }
                   }}
-                  style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px 12px 10px 36px', fontSize: '12px', color: '#fff', outline: 'none', width: '220px' }} 
+                  style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px 12px 10px 36px', fontSize: '12px', color: 'var(--foreground)', outline: 'none', width: '220px' }} 
                 />
                 
                 <AnimatePresence>
@@ -494,11 +518,11 @@ export default function Dashboard() {
                         <span style={{ fontSize: '9px', fontWeight: 900, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.2em' }}>RECENT SEARCHES</span>
                         <button 
                           onMouseDown={(e) => { e.preventDefault(); setRecentSearches([]); localStorage.removeItem('shrinkr_recent_searches') }}
-                          style={{ background: 'none', border: 'none', fontSize: '9px', fontWeight: 900, color: '#555', cursor: 'pointer', letterSpacing: '0.05em' }}
+                          style={{ background: 'none', border: 'none', fontSize: '9px', fontWeight: 900, color: 'var(--muted-foreground)', cursor: 'pointer', letterSpacing: '0.05em' }}
                         >CLEAR ALL</button>
                       </div>
                       {recentSearches.length === 0 ? (
-                        <div style={{ padding: '20px 14px', textAlign: 'center', fontSize: '11px', fontWeight: 800, color: '#444', letterSpacing: '0.1em' }}>NO RECENT SEARCHES</div>
+                        <div style={{ padding: '20px 14px', textAlign: 'center', fontSize: '11px', fontWeight: 800, color: 'var(--muted-foreground)', letterSpacing: '0.1em' }}>NO RECENT SEARCHES</div>
                       ) : (
                         recentSearches.map((s, idx) => (
                           <div 
@@ -507,12 +531,12 @@ export default function Dashboard() {
                             style={{ padding: '8px 14px', display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', transition: 'background 100ms' }}
                             className="search-item"
                           >
-                            <Clock size={12} style={{ color: '#444' }} />
+                            <Clock size={12} style={{ color: 'var(--muted-foreground)' }} />
                             <span style={{ fontSize: '13px', fontWeight: 600, flex: 1 }}>{s}</span>
                             <X 
                               size={12} 
                               onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); const next = recentSearches.filter(item => item !== s); setRecentSearches(next); localStorage.setItem('shrinkr_recent_searches', JSON.stringify(next)) }}
-                              style={{ color: '#444', cursor: 'pointer' }} 
+                              style={{ color: 'var(--muted-foreground)', cursor: 'pointer' }} 
                             />
                           </div>
                         ))
@@ -524,7 +548,7 @@ export default function Dashboard() {
 
               <select 
                 value={sort} onChange={e => setSort(e.target.value)}
-                style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px 16px', fontSize: '11px', fontWeight: 800, color: '#fff', outline: 'none', cursor: 'pointer' }}
+                style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px 16px', fontSize: '11px', fontWeight: 800, color: 'var(--foreground)', outline: 'none', cursor: 'pointer' }}
               >
                 <option value="newest">NEWEST FIRST</option>
                 <option value="oldest">OLDEST FIRST</option>
@@ -565,8 +589,8 @@ export default function Dashboard() {
                       <span>SELECTED</span>
                     </div>
                     <div style={{ height: '12px', width: '1px', background: 'var(--border)' }} />
-                    <button onClick={() => setSelected(urls.map(u => u.shortCode))} style={{ background: 'none', border: 'none', color: '#fff', fontSize: '10px', fontWeight: 900, cursor: 'pointer', letterSpacing: '0.05em' }}>SELECT ALL</button>
-                    <button onClick={() => setSelected([])} style={{ background: 'none', border: 'none', color: '#fff', fontSize: '10px', fontWeight: 900, cursor: 'pointer', letterSpacing: '0.05em' }}>CLEAR</button>
+                    <button onClick={() => setSelected(urls.map(u => u.shortCode))} style={{ background: 'none', border: 'none', color: 'var(--foreground)', fontSize: '10px', fontWeight: 900, cursor: 'pointer', letterSpacing: '0.05em' }}>SELECT ALL</button>
+                    <button onClick={() => setSelected([])} style={{ background: 'none', border: 'none', color: 'var(--foreground)', fontSize: '10px', fontWeight: 900, cursor: 'pointer', letterSpacing: '0.05em' }}>CLEAR</button>
                   </div>
                   
                   <div style={{ display: 'flex', gap: '12px' }}>

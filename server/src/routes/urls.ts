@@ -99,6 +99,7 @@ const formatUrl = (url: any) => ({
   shortCode: url.shortCode,
   originalUrl: url.originalUrl,
   shortUrl: `${getBaseUrl()}/${url.shortCode}`,
+  customAlias: url.customAlias || null,
   totalClicks: url.totalClicks || 0,
   realClicks: url.realClicks || 0,
   createdAt: url.createdAt,
@@ -518,10 +519,11 @@ router.get('/:shortCode/health', requirePermission('read'), async (req: Request,
         headers: { 'User-Agent': 'Shrinkr-Health-Monitor/1.0' }
       })
       const responseTime = Date.now() - startTime
-      
+      const isHealthy = response.status < 400 || response.status === 405
+
       return ok(res, {
         status: response.status,
-        healthy: response.status < 400,
+        healthy: isHealthy,
         responseTime,
         checkedAt: new Date()
       })

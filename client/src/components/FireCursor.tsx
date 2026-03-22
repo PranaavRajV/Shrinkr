@@ -4,12 +4,31 @@ export default function FireCursor() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const particles = useRef<any[]>([])
   const mouse = useRef({ x: 0, y: 0 })
+  const frameId = useRef<number>(0)
 
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
-    const ctx = canvas.getContext('2d')
+    const ctx = canvas.getContext('2d', { alpha: true })
     if (!ctx) return
+
+    let currentAccent = '#ffe0c2'
+    const updateAccent = () => {
+      // Create a dummy element to compute actual resolved CSS variable color for Canvas API
+      const el = document.createElement('div')
+      el.style.color = 'var(--accent)'
+      el.style.display = 'none'
+      document.body.appendChild(el)
+      const computedColor = getComputedStyle(el).color
+      if (computedColor && computedColor !== 'rgba(0, 0, 0, 0)') {
+        currentAccent = computedColor
+      }
+      document.body.removeChild(el)
+    }
+    updateAccent()
+    // Re-check just in case theme changes
+    const observer = new MutationObserver(updateAccent)
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'data-theme'] })
 
     const resize = () => {
       canvas.width = window.innerWidth
@@ -24,10 +43,12 @@ export default function FireCursor() {
       mouse.current.x = e.clientX
       mouse.current.y = e.clientY
 
-      // More sparks when moving faster
-      const count = Math.min(Math.floor(distance / 5) + 1, 8)
+      // Optimization: Limit max particles created per move
+      const count = Math.min(Math.floor(distance / 8) + 1, 5)
       for (let i = 0; i < count; i++) {
-        particles.current.push(new Particle(mouse.current.x, mouse.current.y))
+        if (particles.current.length < 150) { // Global cap for performance
+           particles.current.push(new Particle(mouse.current.x, mouse.current.y))
+        }
       }
     }
 
@@ -44,49 +65,48 @@ export default function FireCursor() {
       constructor(x: number, y: number) {
         this.x = x
         this.y = y
-        this.size = Math.random() * 2.5 + 1.2
-        this.speedX = (Math.random() - 0.5) * 1.8
-        this.speedY = (Math.random() - 0.8) * 2.2 // Drift upwards
-        this.maxLife = Math.random() * 20 + 20
+        this.size = Math.random() * 2 + 1
+        this.speedX = (Math.random() - 0.5) * 1.5
+        this.speedY = (Math.random() - 0.7) * 2
+        this.maxLife = Math.random() * 15 + 15
         this.life = this.maxLife
-        this.color = '#CBFF00'
+        this.color = currentAccent
       }
 
       update() {
         this.x += this.speedX
         this.y += this.speedY
         this.life--
-        if (this.size > 0.1) this.size -= 0.06
-        this.speedY -= 0.03 // Heat rising
+        if (this.size > 0.2) this.size -= 0.05
+        this.speedY -= 0.02
       }
 
       draw() {
         if (!ctx) return
         const opacity = this.life / this.maxLife
-        const flicker = Math.random() * 0.3 + 0.7 // Slight flicker
         ctx.fillStyle = this.color
-        ctx.globalAlpha = opacity * flicker * 0.8
-        ctx.shadowBlur = 15
-        ctx.shadowColor = this.color
+        ctx.globalAlpha = opacity * 0.6
+        // Optimization: Removed shadowBlur (CPU killer)
         ctx.beginPath()
         ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2)
         ctx.fill()
-        ctx.globalAlpha = 1
       }
     }
 
     const animate = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height)
       
-      for (let i = 0; i < particles.current.length; i++) {
-        particles.current[i].update()
-        particles.current[i].draw()
-        if (particles.current[i].life <= 0) {
+      // Optimization: Reversed loop for safer splicing and speed
+      for (let i = particles.current.length - 1; i >= 0; i--) {
+        const p = particles.current[i]
+        p.update()
+        p.draw()
+        if (p.life <= 0) {
           particles.current.splice(i, 1)
-          i--
         }
       }
-      requestAnimationFrame(animate)
+      ctx.globalAlpha = 1
+      frameId.current = requestAnimationFrame(animate)
     }
 
     window.addEventListener('resize', resize)
@@ -97,6 +117,8 @@ export default function FireCursor() {
     return () => {
       window.removeEventListener('resize', resize)
       window.removeEventListener('mousemove', mouseMove)
+      cancelAnimationFrame(frameId.current)
+      observer.disconnect()
     }
   }, [])
 
@@ -105,7 +127,7 @@ export default function FireCursor() {
       ref={canvasRef}
       style={{
         position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 1000000,
-        mixBlendMode: 'screen'
+        mixBlendMode: 'screen', opacity: 0.8
       }}
     />
   )

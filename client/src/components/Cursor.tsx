@@ -78,7 +78,7 @@ export default function Cursor() {
         ref={dotRef}
         style={{
           position: 'fixed', top: 0, left: 0, width: '8px', height: '8px',
-          borderRadius: '50%', background: 'var(--accent, #CBFF00)',
+          borderRadius: '50%', background: 'var(--accent, #ffe0c2)',
           pointerEvents: 'none', zIndex: 999999,
           opacity: isVisible ? 1 : 0,
           transform: isClicking ? 'scale(0.7)' : 'scale(1)',
@@ -93,12 +93,12 @@ export default function Cursor() {
         ref={ringRef}
         style={{
           position: 'fixed', top: 0, left: 0, width: '32px', height: '32px',
-          borderRadius: '50%', border: '1.5px solid var(--accent, #CBFF00)',
+          borderRadius: '50%', border: '1.5px solid var(--accent, #ffe0c2)',
           pointerEvents: 'none', zIndex: 999998,
           opacity: isVisible ? (isHovering ? 0.8 : 0.4) : 0,
           transform: isHovering ? 'scale(1.6)' : (isClicking ? 'scale(0.8)' : 'scale(1)'),
           boxShadow: isHovering ? '0 0 15px var(--accent)' : 'none',
-          backgroundColor: isHovering ? 'var(--accent-soft, rgba(203, 255, 0, 0.05))' : 'transparent',
+          backgroundColor: isHovering ? 'var(--accent-soft, rgba(255, 224, 194, 0.05))' : 'transparent',
           transition: 'opacity 300ms, transform 300ms cubic-bezier(0.23, 1, 0.32, 1), background-color 300ms',
           willChange: 'transform',
         }}

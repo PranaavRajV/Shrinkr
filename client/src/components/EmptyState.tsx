@@ -132,7 +132,7 @@ export default function EmptyState({ type, title, description, action }: EmptySt
           onClick={action.onClick}
           style={{
             background: 'var(--accent)',
-            color: '#000',
+            color: 'var(--primary-foreground)',
             border: 'none',
             padding: '12px 24px',
             borderRadius: 'var(--radius-full)',

@@ -41,12 +41,12 @@ export function Reveal({ children, delay = 0, direction = 'up', distance = 40 }:
   )
 }
 
-export function RevealText({ text, delay = 0 }: { text: string; delay?: number }) {
+export function RevealText({ text, delay = 0, centered = false }: { text: string; delay?: number; centered?: boolean }) {
   const prefersReduced = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
   const words = text.split(' ')
 
   return (
-    <div style={{ overflow: 'hidden', display: 'flex', flexWrap: 'wrap', gap: '0.25em' }}>
+    <div style={{ overflow: 'hidden', display: 'flex', flexWrap: 'wrap', gap: '0.25em', justifyContent: centered ? 'center' : 'flex-start' }}>
       {words.map((word, i) => (
         <span key={i} style={{ overflow: 'hidden', display: 'inline-block' }}>
           <motion.span

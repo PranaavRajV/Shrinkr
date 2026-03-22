@@ -55,15 +55,15 @@ export default function BioPage() {
   }
 
   if (loading) return (
-    <div style={{ minHeight: '100vh', background: '#0a0a0a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--background)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: 'linear' }} style={{ width: 40, height: 40, border: '3px solid #333', borderTopColor: 'var(--accent)', borderRadius: '50%' }} />
     </div>
   )
 
   if (error || !data) return (
-    <div style={{ minHeight: '100vh', background: '#0a0a0a', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px', textAlign: 'center' }}>
-      <h1 style={{ color: '#fff', fontSize: '32px', marginBottom: '16px' }}>404</h1>
-      <p style={{ color: '#555', marginBottom: '32px' }}>{error || 'User not found'}</p>
+    <div style={{ minHeight: '100vh', background: 'var(--background)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px', textAlign: 'center' }}>
+      <h1 style={{ color: 'var(--foreground)', fontSize: '32px', marginBottom: '16px' }}>404</h1>
+      <p style={{ color: 'var(--muted-foreground)', marginBottom: '32px' }}>{error || 'User not found'}</p>
       <Link to="/" style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 800 }}>← RETURN HOME</Link>
     </div>
   )

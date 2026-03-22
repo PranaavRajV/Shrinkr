@@ -58,7 +58,7 @@ export default function Card3D({ children }: Props) {
     >
       <div style={{
         position: 'absolute', inset: 0,
-        background: `radial-gradient(circle at ${shine.x}% ${shine.y}%, rgba(203, 255, 0, 0.08) 0%, transparent 80%)`,
+        background: `radial-gradient(circle at ${shine.x}% ${shine.y}%, rgba(255, 224, 194, 0.08) 0%, transparent 80%)`,
         pointerEvents: 'none', zIndex: 1, borderRadius: 'inherit',
         opacity: isHovered ? 1 : 0, transition: 'opacity 0.3s ease'
       }} />

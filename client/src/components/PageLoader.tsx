@@ -52,7 +52,7 @@ export default function PageLoader() {
            transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1], delay: 1.6 }}
            style={{
              position: 'fixed', inset: 0, zIndex: 999999,
-             background: '#0A0A0A', display: 'flex', flexDirection: 'column',
+             background: 'var(--background)', display: 'flex', flexDirection: 'column',
              alignItems: 'center', justifyContent: 'center'
            }}
         >
@@ -91,7 +91,7 @@ export default function PageLoader() {
               animate={{ opacity: percent > 0 ? 1 : 0 }}
               style={{
                 position: 'fixed', bottom: '40px', left: '40px',
-                fontSize: '80px', fontWeight: 900, color: 'rgba(203, 255, 0, 0.05)',
+                fontSize: '80px', fontWeight: 900, color: 'rgba(255, 224, 194, 0.05)',
                 fontFamily: 'Space Grotesk, sans-serif'
               }}
             >

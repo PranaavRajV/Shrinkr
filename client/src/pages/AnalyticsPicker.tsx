@@ -79,7 +79,7 @@ export default function AnalyticsPicker() {
               <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '12px' }}>
                 {c.label}
               </div>
-              <div style={{ fontSize: '36px', fontWeight: 900, letterSpacing: '-0.03em', color: '#fff', marginBottom: '6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <div style={{ fontSize: '36px', fontWeight: 900, letterSpacing: '-0.03em', color: 'var(--foreground)', marginBottom: '6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {loading ? '—' : c.value}
               </div>
               <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{c.sub}</div>
@@ -103,7 +103,7 @@ export default function AnalyticsPicker() {
                 onChange={e => setSearch(e.target.value)}
                 style={{
                   width: '100%', background: 'var(--bg)', border: '1px solid var(--border)',
-                  color: '#fff', fontSize: '13px', padding: '10px 14px 10px 36px',
+                  color: 'var(--foreground)', fontSize: '13px', padding: '10px 14px 10px 36px',
                   borderRadius: '8px', outline: 'none', boxSizing: 'border-box'
                 }}
               />
@@ -128,7 +128,7 @@ export default function AnalyticsPicker() {
                 <button
                   onClick={() => setShowCreate(true)}
                   style={{
-                    background: 'var(--accent)', color: '#000', border: 'none',
+                    background: 'var(--accent)', color: 'var(--primary-foreground)', border: 'none',
                     padding: '14px 32px', borderRadius: 'var(--radius-full)',
                     fontSize: '12px', fontWeight: 900, cursor: 'pointer'
                   }}
@@ -150,32 +150,32 @@ export default function AnalyticsPicker() {
                     display: 'flex', alignItems: 'center', gap: '20px',
                     cursor: 'pointer', transition: 'background 0.15s'
                   }}
-                  whileHover={{ backgroundColor: 'rgba(203,255,0,0.025)' }}
+                  whileHover={{ backgroundColor: 'rgba(255,224,194,0.025)' }}
                 >
                   {/* Link icon */}
                   <div style={{
                     width: '40px', height: '40px', borderRadius: '10px',
-                    background: 'rgba(203,255,0,0.08)', border: '1px solid rgba(203,255,0,0.15)',
+                    background: 'rgba(255,224,194,0.08)', border: '1px solid rgba(255,224,194,0.15)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
                   }}>
-                    <Zap size={18} color="#CBFF00" />
+                    <Zap size={18} color="#ffe0c2" />
                   </div>
 
                   {/* URL info */}
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                      <span style={{ fontWeight: 800, color: '#CBFF00', fontSize: '14px' }}>
+                      <span style={{ fontWeight: 800, color: '#ffe0c2', fontSize: '14px' }}>
                         /{u.shortCode}
                       </span>
                       <a
                         href={u.shortUrl} target="_blank" rel="noreferrer"
                         onClick={e => e.stopPropagation()}
-                        style={{ color: '#444', display: 'flex', alignItems: 'center' }}
+                        style={{ color: 'var(--muted-foreground)', display: 'flex', alignItems: 'center' }}
                       >
                         <ExternalLink size={12} />
                       </a>
                     </div>
-                    <div style={{ fontSize: '12px', color: '#555', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <div style={{ fontSize: '12px', color: 'var(--muted-foreground)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {u.originalUrl}
                     </div>
                   </div>
@@ -183,10 +183,10 @@ export default function AnalyticsPicker() {
                   {/* Stats */}
                   <div style={{ display: 'flex', gap: '32px', alignItems: 'center', flexShrink: 0 }}>
                     <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: '18px', fontWeight: 900, letterSpacing: '-0.02em', color: '#fff' }}>
+                      <div style={{ fontSize: '18px', fontWeight: 900, letterSpacing: '-0.02em', color: 'var(--foreground)' }}>
                         {(u.totalClicks || 0).toLocaleString()}
                       </div>
-                      <div style={{ fontSize: '10px', color: '#555', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'flex-end' }}>
+                      <div style={{ fontSize: '10px', color: 'var(--muted-foreground)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'flex-end' }}>
                         <MousePointer2 size={10} /> clicks
                       </div>
                     </div>
@@ -195,7 +195,7 @@ export default function AnalyticsPicker() {
                       <div style={{ fontSize: '12px', fontWeight: 700, color: '#666' }}>
                         {format(new Date(u.createdAt), 'MMM d, yyyy')}
                       </div>
-                      <div style={{ fontSize: '10px', color: '#444', display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'flex-end' }}>
+                      <div style={{ fontSize: '10px', color: 'var(--muted-foreground)', display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'flex-end' }}>
                         <Clock size={10} /> created
                       </div>
                     </div>
@@ -203,8 +203,8 @@ export default function AnalyticsPicker() {
                     {/* View analytics arrow */}
                     <div style={{
                       width: '36px', height: '36px', borderRadius: '8px',
-                      border: '1px solid #222', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      color: '#555', transition: 'all 0.2s', flexShrink: 0
+                      border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      color: 'var(--muted-foreground)', transition: 'all 0.2s', flexShrink: 0
                     }}>
                       <ArrowRight size={16} />
                     </div>
@@ -216,7 +216,7 @@ export default function AnalyticsPicker() {
         </div>
 
         {filtered.length > 0 && (
-          <p style={{ textAlign: 'center', marginTop: '20px', color: '#333', fontSize: '12px', fontWeight: 700 }}>
+          <p style={{ textAlign: 'center', marginTop: '20px', color: 'var(--muted-foreground)', fontSize: '12px', fontWeight: 700 }}>
             Showing {filtered.length} of {urls.length} links · Click any row to view full analytics
           </p>
         )}

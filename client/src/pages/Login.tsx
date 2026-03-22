@@ -54,16 +54,15 @@ export default function Login() {
       
       {/* ── LEFT COLUMN: Brand & Stats (Login Variant) ─────────────────── */}
       <div style={{
-        backgroundColor: '#0F0F0F',
+        backgroundColor: '#0a0a0a',
         display: 'flex', flexDirection: 'column',
         padding: '80px', position: 'relative',
         borderRight: '1px solid var(--border)'
       }}>
         <div style={{ marginBottom: '80px' }}>
-          <h1 style={{ 
-            fontSize: '48px', fontWeight: 900, 
-            letterSpacing: '-0.05em', color: 'var(--accent)',
-            fontFamily: 'Space Grotesk, sans-serif'
+          <h1 className="font-display" style={{ 
+            fontSize: '48px', color: 'var(--accent)',
+            letterSpacing: '-0.05em'
           }}>
             ZURL
             <div style={{ width: '60px', height: '4px', background: 'var(--accent)', marginTop: '8px', opacity: 0.5 }} />
@@ -131,7 +130,7 @@ export default function Login() {
                     type="email" placeholder="name@company.com" required value={email} onChange={e => setEmail(e.target.value)}
                     style={{ 
                       width: '100%', background: 'var(--bg-secondary)', border: '1px solid var(--border)',
-                      padding: '16px 20px', borderRadius: 'var(--radius-md)', color: '#fff', fontSize: '15px'
+                      padding: '16px 20px', borderRadius: 'var(--radius-md)', color: 'var(--foreground)', fontSize: '15px'
                     }} 
                   />
                 </div>
@@ -145,7 +144,7 @@ export default function Login() {
                         type={showPw ? 'text' : 'password'} placeholder="••••••••" required value={password} onChange={e => setPassword(e.target.value)}
                         style={{ 
                           width: '100%', background: 'var(--bg-secondary)', border: '1px solid var(--border)',
-                          padding: '16px 20px', paddingRight: '50px', borderRadius: 'var(--radius-md)', color: '#fff', fontSize: '15px'
+                          padding: '16px 20px', paddingRight: '50px', borderRadius: 'var(--radius-md)', color: 'var(--foreground)', fontSize: '15px'
                         }} 
                       />
                       <button 
@@ -175,7 +174,7 @@ export default function Login() {
                     autoFocus
                     style={{ 
                        width: '100%', background: 'var(--bg-secondary)', border: '1px solid var(--accent)',
-                       padding: '16px 20px', borderRadius: 'var(--radius-md)', color: '#fff', fontSize: '24px',
+                       padding: '16px 20px', borderRadius: 'var(--radius-md)', color: 'var(--foreground)', fontSize: '24px',
                        fontWeight: 900, textAlign: 'center', letterSpacing: '0.5em'
                     }} 
                  />
@@ -195,10 +194,10 @@ export default function Login() {
             <button 
               type="submit" disabled={loading}
               style={{
-                height: '60px', background: 'var(--accent)', color: '#000',
+                height: '60px', background: 'var(--accent)', color: 'var(--primary-foreground)',
                 border: 'none', borderRadius: 'var(--radius-full)', fontWeight: 800,
                 fontSize: '15px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                gap: '12px', boxShadow: '0 10px 30px rgba(203, 255, 0, 0.2)', marginTop: '10px'
+                gap: '12px', boxShadow: '0 10px 30px rgba(255, 224, 194, 0.2)', marginTop: '10px'
               }}
             >
               {loading ? 'Authenticating...' : requires2FA ? 'Verify Identity' : <><LogIn size={20} /> Access Vault</>}

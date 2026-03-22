@@ -21,11 +21,11 @@ import AnalyticsHeatmap from '../components/HeatmapChart'
 import confetti from 'canvas-confetti'
 import { Sparkles, Trophy } from 'lucide-react'
 
-const COLORS = ['#CBFF00', '#A3CC00', '#7A9900', '#526600', '#2B3300']
+const COLORS = ['#ffe0c2', '#c8967a', '#9a5f42', '#644a40', '#392519']
 const DEVICE_COLORS: Record<string, string> = {
-  desktop: '#CBFF00',
-  mobile: '#A3CC00',
-  tablet: '#526600',
+  desktop: '#ffe0c2',
+  mobile: '#c8967a',
+  tablet: '#644a40',
   Other: '#333300'
 }
 
@@ -70,7 +70,7 @@ export default function Analytics() {
       if (res.data.data.clickGoal && res.data.data.totalClicks >= res.data.data.clickGoal && !res.data.data.goalNotified) {
         confetti({
           particleCount: 150, spread: 80, origin: { y: 0.6 },
-          colors: ['#CBFF00', '#FFFFFF', '#333333']
+          colors: ['#ffe0c2', '#FFFFFF', '#333333']
         })
         toast.success(`GOAL REACHED! ${res.data.data.totalClicks} CLICKS`, {
           icon: '🏆', duration: 5000
@@ -170,14 +170,14 @@ export default function Analytics() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <RevealText text="Advanced Metrics" />
               <Reveal delay={0.2}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(203,255,0,0.1)', color: 'var(--accent)', padding: '4px 12px', borderRadius: 'var(--radius-full)', fontSize: '11px', fontWeight: 900 }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(255,224,194,0.1)', color: 'var(--accent)', padding: '4px 12px', borderRadius: 'var(--radius-full)', fontSize: '11px', fontWeight: 900 }}>
                   LIVE
                 </span>
               </Reveal>
             </div>
             <Reveal delay={0.3}>
               <div style={{ color: 'var(--text-muted)', fontSize: '14px', marginTop: '6px' }}>
-                Performance deep-dive for <span style={{ color: '#fff', fontWeight: 700 }}>/{shortCode}</span>
+                Performance deep-dive for <span style={{ color: 'var(--foreground)', fontWeight: 700 }}>/{shortCode}</span>
               </div>
             </Reveal>
           </div>
@@ -189,7 +189,7 @@ export default function Analytics() {
               </button>
             </Magnetic>
             <Magnetic>
-              <button onClick={handleShare} style={{ background: 'var(--accent)', color: '#000', border: 'none', padding: '12px 24px', borderRadius: 'var(--radius-full)', fontSize: '11px', fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <button onClick={handleShare} style={{ background: 'var(--accent)', color: 'var(--primary-foreground)', border: 'none', padding: '12px 24px', borderRadius: 'var(--radius-full)', fontSize: '11px', fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Share2 size={16} /> SHARE STATS
               </button>
             </Magnetic>
@@ -230,7 +230,7 @@ export default function Analytics() {
               color: data.clickGoal ? (totalClicks >= data.clickGoal ? 'var(--accent)' : '#fff') : 'var(--text-muted)',
               sub: data.clickGoal ? `${totalClicks} / ${data.clickGoal} target` : 'Set a goal to track'
             },
-            { label: 'Last Human Visit', val: 0, label_val: lastVisited, icon: Clock, color: '#fff' },
+            { label: 'Last Human Visit', val: 0, label_val: lastVisited, icon: Clock, color: 'var(--foreground)' },
           ].map((s, i) => {
             const Icon: any = s.icon;
             return (
@@ -303,9 +303,9 @@ export default function Analytics() {
                     <YAxis hide />
                     <Tooltip 
                       cursor={{ stroke: '#222', strokeWidth: 1 }}
-                      contentStyle={{ background: '#111', border: '1px solid #222', borderRadius: '8px', boxShadow: '0 10px 30px rgba(0,0,0,0.5)' }}
+                      contentStyle={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '8px', boxShadow: '0 10px 30px rgba(0,0,0,0.5)' }}
                       labelStyle={{ color: 'var(--accent)', fontWeight: 900, marginBottom: '4px', fontSize: '11px' }}
-                      itemStyle={{ color: '#fff', fontSize: '14px', fontWeight: 700 }}
+                      itemStyle={{ color: 'var(--foreground)', fontSize: '14px', fontWeight: 700 }}
                       formatter={(val) => [`${val} clicks`]}
                       labelFormatter={(label, items) => items[0]?.payload.fullDate || label}
                     />
@@ -341,7 +341,7 @@ export default function Analytics() {
                         <Cell key={`cell-${i}`} fill={DEVICE_COLORS[d.name.toLowerCase()] || COLORS[i % COLORS.length]} />
                       ))}
                     </Pie>
-                    <Tooltip contentStyle={{ background: '#111', border: '1px solid #222', borderRadius: '8px' }} />
+                    <Tooltip contentStyle={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '8px' }} />
                   </PieChart>
                 </ResponsiveContainer>
                 <div style={{ position: 'absolute', top: '55%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center', pointerEvents: 'none' }}>
@@ -380,7 +380,7 @@ export default function Analytics() {
                   <BarChart data={countryData} layout="vertical">
                     <XAxis type="number" hide />
                     <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fill: '#fff', fontSize: 11, fontWeight: 800 }} width={40} />
-                    <Tooltip cursor={{ fill: 'rgba(255,255,255,0.03)' }} contentStyle={{ background: '#111', border: '1px solid #222' }} />
+                    <Tooltip cursor={{ fill: 'rgba(255,255,255,0.03)' }} contentStyle={{ background: 'var(--card)', border: '1px solid var(--border)' }} />
                     <Bar dataKey="count" fill="var(--accent)" radius={[0, 4, 4, 0]} barSize={24} />
                   </BarChart>
                 </ResponsiveContainer>
@@ -404,8 +404,8 @@ export default function Analytics() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   {(data.topReferrers || []).slice(0, 5).map((r: any, i: number) => (
                     <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px' }}>
-                      <span style={{ fontWeight: 800, color: '#fff' }}>{r._id || 'Direct / Unknown'}</span>
-                      <span style={{ fontSize: '11px', fontWeight: 900, color: 'var(--accent)', background: 'rgba(203,255,0,0.1)', padding: '2px 8px', borderRadius: '4px' }}>{r.count} CLKS</span>
+                      <span style={{ fontWeight: 800, color: 'var(--foreground)' }}>{r._id || 'Direct / Unknown'}</span>
+                      <span style={{ fontSize: '11px', fontWeight: 900, color: 'var(--accent)', background: 'rgba(255,224,194,0.1)', padding: '2px 8px', borderRadius: '4px' }}>{r.count} CLKS</span>
                     </div>
                   ))}
                 </div>
@@ -474,7 +474,7 @@ export default function Analytics() {
                         transition={{ delay: i * 0.03 }}
                         style={{ borderBottom: '1px solid rgba(255,255,255,0.03)', opacity: c.isBot ? 0.4 : 1 }}
                       >
-                        <td style={{ padding: '16px', fontSize: '12px', color: '#fff' }}>
+                        <td style={{ padding: '16px', fontSize: '12px', color: 'var(--foreground)' }}>
                           <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                             {format(new Date(c.timestamp), 'MMM dd, HH:mm:ss')}
                             {c.isBot && (
@@ -488,7 +488,7 @@ export default function Analytics() {
                           </span>
                         </td>
                         <td style={{ padding: '16px', fontSize: '12px', color: 'var(--text-muted)', fontFamily: 'Space Grotesk' }}>{c.ip?.replace(/\.[0-9]+\.[0-9]+$/, '.X.X')}</td>
-                        <td style={{ padding: '16px', fontSize: '12px', color: '#fff', fontWeight: 600 }}>{c.country || 'Unknown'}</td>
+                        <td style={{ padding: '16px', fontSize: '12px', color: 'var(--foreground)', fontWeight: 600 }}>{c.country || 'Unknown'}</td>
                         <td style={{ padding: '16px', fontSize: '12px', color: 'var(--text-secondary)' }}>
                           {c.isBot ? <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#ff4444' }}><Cpu size={12} /> {c.browser}</span> : c.browser || 'Other'}
                         </td>
