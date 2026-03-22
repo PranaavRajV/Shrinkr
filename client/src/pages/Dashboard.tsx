@@ -166,6 +166,9 @@ export default function Dashboard() {
     return matchSearch && matchTag && matchPin
   }), sort)
 
+  const pinnedUrls = filteredUrls.filter(u => u.isPinned)
+  const otherUrls = filteredUrls.filter(u => !u.isPinned)
+
   useEffect(() => { fetchData() }, [fetchData])
 
   useEffect(() => { localStorage.setItem('shrinkr_sort', sort) }, [sort])
@@ -278,6 +281,137 @@ export default function Dashboard() {
   const topLink = urls.length > 0 ? urls.reduce((prev, cur) => ((prev.totalClicks || 0) > (cur.totalClicks || 0) ? prev : cur)) : null
   const baseUrl = window.location.host
 
+  const renderUrlRow = (u: any, isPinned = false) => (
+    <motion.tr 
+      key={u.id} 
+      layout 
+      initial={{ opacity: 0 }} 
+      animate={{ opacity: 1 }} 
+      exit={{ opacity: 0 }} 
+      style={{ 
+        borderBottom: '1px solid var(--border)', 
+        background: selected.includes(u.shortCode) ? 'rgba(203,255,0,0.03)' : 'none', 
+        borderLeft: selected.includes(u.shortCode) ? '4px solid var(--accent)' : isPinned ? '2px solid var(--accent)' : 'none',
+        position: 'relative'
+      }}
+    >
+      <td style={{ padding: '20px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          {selectMode ? (
+            <input type="checkbox" checked={selected.includes(u.shortCode)} onChange={() => setSelected(prev => prev.includes(u.shortCode) ? prev.filter(s => s !== u.shortCode) : [...prev, u.shortCode])} style={{ accentColor: 'var(--accent)', cursor: 'pointer' }} />
+          ) : u.ogData?.favicon ? (<img src={u.ogData.favicon} style={{ width: '16px', height: '16px' }} />) : (<Globe size={14} color="var(--text-muted)" />)}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <a href={u.shortUrl} target="_blank" rel="noreferrer" style={{ color: '#fff', textDecoration: 'none', fontWeight: 800 }}>{baseUrl}/{u.shortCode}</a>
+            {u.linkPassword && (
+              <div style={{ position: 'relative' }} className="lock-tooltip-trigger">
+                <Lock size={12} color="var(--accent)" />
+                <style>{`
+                  .lock-tooltip-trigger::after {
+                    content: 'PASSWORD PROTECTED';
+                    position: absolute;
+                    bottom: calc(100% + 6px);
+                    left: 50%;
+                    transform: translateX(-50%);
+                    background: #111;
+                    border: 1px solid var(--border);
+                    padding: 4px 8px;
+                    font-size: 9px;
+                    text-transform: uppercase;
+                    letter-spacing: 0.15em;
+                    white-space: nowrap;
+                    pointer-events: none;
+                    opacity: 0;
+                    transition: opacity 150ms;
+                    z-index: 100;
+                  }
+                  .lock-tooltip-trigger:hover::after { opacity: 1; }
+                `}</style>
+              </div>
+            )}
+            {u.webhookUrl && <Zap size={12} color="var(--accent)" />}
+          </div>
+        </div>
+        {isPinned && (
+          <span style={{ position: 'absolute', top: '8px', right: '8px', fontSize: '9px', fontWeight: 900, color: 'var(--accent)', letterSpacing: '0.2em' }}>
+            PINNED
+          </span>
+        )}
+      </td>
+      <td style={{ padding: '20px' }}>
+        <div style={{ maxWidth: '280px' }}>
+          <div style={{ color: '#fff', fontSize: '13px', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.ogData?.title || u.originalUrl}</div>
+          {u.clickGoal && (
+            <div style={{ marginTop: '12px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '9px', fontWeight: 900, letterSpacing: '0.1em' }}>
+                <span style={{ color: 'var(--text-muted)' }}>{u.totalClicks} / {u.clickGoal} CLICKS</span>
+                <span style={{ color: u.totalClicks >= u.clickGoal ? 'var(--accent)' : 'var(--accent)' }}>{Math.floor(Math.min((u.totalClicks / u.clickGoal) * 100, 100))}%</span>
+              </div>
+              <div style={{ height: '2px', background: '#222', borderRadius: 0, overflow: 'hidden' }}>
+                <motion.div 
+                  initial={{ width: 0 }} 
+                  animate={{ width: `${Math.min((u.totalClicks / u.clickGoal) * 100, 100)}%` }} 
+                  transition={{ duration: 0.8, delay: 0.2, ease: 'easeOut' }}
+                  style={{ 
+                    height: '100%', 
+                    background: 'var(--accent)',
+                    boxShadow: u.totalClicks >= u.clickGoal ? '0 0 10px var(--accent)' : 'none'
+                  }} 
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      </td>
+      <td style={{ padding: '20px' }}>
+        {(() => {
+          const status = healthStatus[u.shortCode]
+          const color = !status ? '#333' : status.healthy ? '#CBFF00' : '#ff4444'
+          return (<div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><div style={{ width: '8px', height: '8px', borderRadius: '50%', background: color }} /><span style={{ fontSize: '10px', fontWeight: 900, color: 'var(--text-muted)' }}>{!status ? '—' : status.healthy ? 'UP' : 'DOWN'}</span></div>)
+        })()}
+      </td>
+      <td style={{ padding: '20px' }}>
+        {(() => {
+          const status = u.expiresAt ? getExpiryStatus(u.expiresAt) : { label: 'ACTIVE', level: 'normal' }
+          return (<span style={{ fontSize: '10px', fontWeight: 900, padding: '3px 8px', borderRadius: '4px', background: status.level === 'danger' ? 'rgba(255,68,68,0.1)' : 'rgba(203,255,0,0.1)', color: status.level === 'danger' ? '#ff4444' : '#CBFF00' }}>{status.label}</span>)
+        })()}
+      </td>
+      <td style={{ padding: '20px' }}><div style={{ fontSize: '13px', fontWeight: 800 }}><CountUp value={u.totalClicks || 0} /></div></td>
+      <td style={{ padding: '20px', textAlign: 'right' }}>
+        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', position: 'relative' }}>
+          <button 
+            onClick={() => handlePin(u.shortCode, u.id)}
+            style={{ background: 'none', border: '1px solid var(--border)', borderRadius: '6px', padding: '6px 10px', color: u.isPinned ? 'var(--accent)' : 'var(--text-muted)', cursor: 'pointer', transition: 'all 0.2s' }}
+          >
+            <Star size={14} fill={u.isPinned ? 'var(--accent)' : 'none'} style={{ transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)' }} />
+          </button>
+          <div style={{ position: 'relative' }}>
+            <button onClick={() => setCopyDropdownId(copyDropdownId === u.id ? null : u.id)} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: '6px', padding: '6px 8px', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}><Copy size={14} /><ChevronDown size={10} /></button>
+            <AnimatePresence>
+              {copyDropdownId === u.id && (
+                <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} style={{ position: 'absolute', top: '100%', right: 0, zIndex: 1100, background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '12px', padding: '8px', width: '200px', boxShadow: '0 20px 40px rgba(0,0,0,0.5)', marginTop: '8px' }}>
+                  {[
+                    { id: 'url', label: 'Copy URL', desc: 'Plain short link' },
+                    { id: 'markdown', label: 'Markdown', desc: 'Link with title' },
+                    { id: 'html', label: 'HTML', desc: 'Anchor tag' },
+                    { id: 'original', label: 'Original URL', desc: 'Destination link' }
+                  ].map(opt => (
+                    <button key={opt.id} onClick={() => handleCopy(u, opt.id as any)} className="dropdown-item" style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', padding: '10px 12px', borderRadius: '8px', cursor: 'pointer', color: '#fff', fontSize: '12px', fontWeight: 600, transition: 'all 0.2s' }}>
+                      <div style={{ fontWeight: 800 }}>{opt.label}</div>
+                      <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{opt.desc}</div>
+                    </button>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+          <button onClick={() => setSelectedQR(u.shortUrl)} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: '6px', padding: '6px 10px', color: 'var(--text-muted)', cursor: 'pointer' }}><QrCode size={14} /></button>
+          <Link to={`/analytics/${u.shortCode}`} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: '6px', padding: '6px 10px', color: 'var(--text-muted)', display: 'flex' }}><BarChart2 size={14} /></Link>
+          <button onClick={() => handleDelete(u.shortCode, u.id)} style={{ background: 'none', border: '1px solid #311', color: '#ff4444', borderRadius: '6px', padding: '6px 10px', cursor: 'pointer' }}><Trash2 size={14} /></button>
+        </div>
+      </td>
+    </motion.tr>
+  )
+
   return (
     <Layout onCreateLink={() => setShowCreate(true)}>
       <AnimatePresence>
@@ -326,7 +460,66 @@ export default function Dashboard() {
             <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
               <div style={{ position: 'relative' }}>
                 <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-                <input type="text" placeholder="Search..." value={search} onChange={e => setSearch(e.target.value)} style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px 12px 10px 36px', fontSize: '12px', color: '#fff', outline: 'none', width: '220px' }} />
+                <input 
+                  type="text" 
+                  placeholder="Search..." 
+                  value={search} 
+                  onChange={e => setSearch(e.target.value)} 
+                  onFocus={() => setShowRecent(true)}
+                  onBlur={() => setTimeout(() => setShowRecent(false), 200) }
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && search.trim()) {
+                      const updated = [search.trim(), ...recentSearches.filter(s => s !== search.trim())].slice(0, 5)
+                      setRecentSearches(updated)
+                      localStorage.setItem('shrinkr_recent_searches', JSON.stringify(updated))
+                    }
+                  }}
+                  style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px 12px 10px 36px', fontSize: '12px', color: '#fff', outline: 'none', width: '220px' }} 
+                />
+                
+                <AnimatePresence>
+                  {showRecent && (
+                    <motion.div 
+                      initial={{ opacity: 0, y: -4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -4 }}
+                      transition={{ duration: 0.15 }}
+                      style={{ 
+                        position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, zIndex: 1200, 
+                        background: 'var(--card-bg)', border: '1px solid var(--border)', borderRadius: '8px',
+                        maxHeight: '240px', overflowY: 'auto', boxShadow: '0 20px 40px rgba(0,0,0,0.5)'
+                      }}
+                    >
+                      <div style={{ padding: '10px 14px 6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '9px', fontWeight: 900, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.2em' }}>RECENT SEARCHES</span>
+                        <button 
+                          onMouseDown={(e) => { e.preventDefault(); setRecentSearches([]); localStorage.removeItem('shrinkr_recent_searches') }}
+                          style={{ background: 'none', border: 'none', fontSize: '9px', fontWeight: 900, color: '#555', cursor: 'pointer', letterSpacing: '0.05em' }}
+                        >CLEAR ALL</button>
+                      </div>
+                      {recentSearches.length === 0 ? (
+                        <div style={{ padding: '20px 14px', textAlign: 'center', fontSize: '11px', fontWeight: 800, color: '#444', letterSpacing: '0.1em' }}>NO RECENT SEARCHES</div>
+                      ) : (
+                        recentSearches.map((s, idx) => (
+                          <div 
+                            key={idx} 
+                            onMouseDown={(e) => { e.preventDefault(); setSearch(s); setShowRecent(false) }}
+                            style={{ padding: '8px 14px', display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', transition: 'background 100ms' }}
+                            className="search-item"
+                          >
+                            <Clock size={12} style={{ color: '#444' }} />
+                            <span style={{ fontSize: '13px', fontWeight: 600, flex: 1 }}>{s}</span>
+                            <X 
+                              size={12} 
+                              onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); const next = recentSearches.filter(item => item !== s); setRecentSearches(next); localStorage.setItem('shrinkr_recent_searches', JSON.stringify(next)) }}
+                              style={{ color: '#444', cursor: 'pointer' }} 
+                            />
+                          </div>
+                        ))
+                      )}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
 
               <select 
@@ -353,14 +546,62 @@ export default function Dashboard() {
           </div>
 
           <AnimatePresence>
-            {selectMode && selected.length > 0 && (
-              <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} style={{ background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border)', overflow: 'hidden' }}>
-                <div style={{ padding: '12px 32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ fontSize: '12px', fontWeight: 800, color: 'var(--accent)' }}>{selected.length} SELECTED</div>
-                  <div style={{ display: 'flex', gap: '16px' }}>
-                    <button onClick={() => setSelected(urls.map(u => u.shortCode))} style={{ background: 'none', border: 'none', color: '#fff', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}>SELECT ALL</button>
-                    <button onClick={() => setSelected([])} style={{ background: 'none', border: 'none', color: '#fff', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}>DESELECT</button>
-                    <button onClick={handleBulkDelete} style={{ background: '#ff4444', color: '#fff', border: 'none', padding: '6px 14px', borderRadius: '6px', fontSize: '11px', fontWeight: 900, cursor: 'pointer' }}>DELETE SELECTED</button>
+            {selectMode && (
+              <motion.div 
+                initial={{ height: 0, opacity: 0 }} 
+                animate={{ height: 'auto', opacity: 1 }} 
+                exit={{ height: 0, opacity: 0 }} 
+                style={{ 
+                  background: 'var(--bg)', 
+                  borderBottom: '1px solid var(--border)', 
+                  overflow: 'hidden',
+                  zIndex: 100 
+                }}
+              >
+                <div style={{ padding: '16px 32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                    <div style={{ fontSize: '11px', fontWeight: 900, color: 'var(--text-muted)', letterSpacing: '0.15em', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ color: selected.length > 0 ? 'var(--accent)' : 'var(--text-muted)', fontSize: '14px', transition: 'all 0.3s' }}>{selected.length}</span>
+                      <span>SELECTED</span>
+                    </div>
+                    <div style={{ height: '12px', width: '1px', background: 'var(--border)' }} />
+                    <button onClick={() => setSelected(urls.map(u => u.shortCode))} style={{ background: 'none', border: 'none', color: '#fff', fontSize: '10px', fontWeight: 900, cursor: 'pointer', letterSpacing: '0.05em' }}>SELECT ALL</button>
+                    <button onClick={() => setSelected([])} style={{ background: 'none', border: 'none', color: '#fff', fontSize: '10px', fontWeight: 900, cursor: 'pointer', letterSpacing: '0.05em' }}>CLEAR</button>
+                  </div>
+                  
+                  <div style={{ display: 'flex', gap: '12px' }}>
+                    <AnimatePresence>
+                      {selected.length > 0 && (
+                        <motion.button 
+                          initial={{ opacity: 0, scale: 0.9 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.9 }}
+                          onClick={handleBulkDelete} 
+                          className="bulk-delete-btn"
+                          style={{ 
+                            background: 'rgba(255,68,68,0.1)', 
+                            color: '#ff4444', 
+                            border: '1px solid rgba(255,68,68,0.2)', 
+                            padding: '8px 20px', 
+                            borderRadius: '6px', 
+                            fontSize: '11px', 
+                            fontWeight: 900, 
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                            letterSpacing: '0.05em'
+                          }}
+                        >
+                          DELETE SELECTED
+                          <style>{`
+                            .bulk-delete-btn:hover {
+                              background: #ff4444 !important;
+                              color: #fff !important;
+                              box-shadow: 0 0 20px rgba(255,68,68,0.3);
+                            }
+                          `}</style>
+                        </motion.button>
+                      )}
+                    </AnimatePresence>
                   </div>
                 </div>
               </motion.div>
@@ -374,78 +615,39 @@ export default function Dashboard() {
           ) : (
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead><tr style={{ textAlign: 'left', borderBottom: '1px solid var(--border)' }}>{['SHORT URL', 'ORIGINAL DESTINATION', 'HEALTH', 'STATUS', 'CLICKS', 'ACTIONS'].map(h => (<th key={h} style={{ padding: '20px', fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase' }}>{h}</th>))}</tr></thead>
-                <tbody>
-                  <AnimatePresence mode="popLayout">
-                    {filteredUrls.map((u) => (
-                      <motion.tr key={u.id} layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ borderBottom: '1px solid var(--border)', background: selected.includes(u.shortCode) ? 'rgba(203,255,0,0.03)' : 'none', borderLeft: selected.includes(u.shortCode) ? '4px solid var(--accent)' : 'none' }}>
-                        <td style={{ padding: '20px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                            {selectMode ? (
-                              <input type="checkbox" checked={selected.includes(u.shortCode)} onChange={() => setSelected(prev => prev.includes(u.shortCode) ? prev.filter(s => s !== u.shortCode) : [...prev, u.shortCode])} style={{ accentColor: 'var(--accent)', cursor: 'pointer' }} />
-                            ) : u.ogData?.favicon ? (<img src={u.ogData.favicon} style={{ width: '16px', height: '16px' }} />) : (<Globe size={14} color="var(--text-muted)" />)}
-                            <a href={u.shortUrl} target="_blank" rel="noreferrer" style={{ color: '#fff', textDecoration: 'none', fontWeight: 800 }}>{baseUrl}/{u.shortCode}</a>
-                          </div>
-                        </td>
-                        <td style={{ padding: '20px' }}>
-                          <div style={{ maxWidth: '280px' }}>
-                            <div style={{ color: '#fff', fontSize: '13px', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.ogData?.title || u.originalUrl}</div>
-                            {u.clickGoal && (
-                              <div style={{ marginTop: '8px' }}>
-                                <div style={{ height: '3px', background: '#222', borderRadius: '2px', overflow: 'hidden' }}>
-                                  <motion.div initial={{ width: 0 }} animate={{ width: `${Math.min((u.totalClicks / u.clickGoal) * 100, 100)}%` }} style={{ height: '100%', background: 'var(--accent)' }} />
-                                </div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px', fontSize: '9px', fontWeight: 900, color: 'var(--text-muted)' }}>
-                                  <span>{u.totalClicks} / {u.clickGoal} CLICKS</span>
-                                  {u.totalClicks >= u.clickGoal && <span style={{ color: 'var(--accent)' }}>GOAL REACHED</span>}
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        </td>
-                        <td style={{ padding: '20px' }}>
-                          {(() => {
-                            const status = healthStatus[u.shortCode]
-                            const color = !status ? '#333' : status.healthy ? '#CBFF00' : '#ff4444'
-                            return (<div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><div style={{ width: '8px', height: '8px', borderRadius: '50%', background: color }} /><span style={{ fontSize: '10px', fontWeight: 900, color: 'var(--text-muted)' }}>{!status ? '—' : status.healthy ? 'UP' : 'DOWN'}</span></div>)
-                          })()}
-                        </td>
-                        <td style={{ padding: '20px' }}>
-                          {(() => {
-                            const status = u.expiresAt ? getExpiryStatus(u.expiresAt) : { label: 'ACTIVE', level: 'normal' }
-                            return (<span style={{ fontSize: '10px', fontWeight: 900, padding: '3px 8px', borderRadius: '4px', background: status.level === 'danger' ? 'rgba(255,68,68,0.1)' : 'rgba(203,255,0,0.1)', color: status.level === 'danger' ? '#ff4444' : '#CBFF00' }}>{status.label}</span>)
-                          })()}
-                        </td>
-                        <td style={{ padding: '20px' }}><div style={{ fontSize: '13px', fontWeight: 800 }}><CountUp value={u.totalClicks || 0} /></div></td>
-                        <td style={{ padding: '20px', textAlign: 'right' }}>
-                          <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', position: 'relative' }}>
-                            <div style={{ position: 'relative' }}>
-                              <button onClick={() => setCopyDropdownId(copyDropdownId === u.id ? null : u.id)} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: '6px', padding: '6px 8px', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}><Copy size={14} /><ChevronDown size={10} /></button>
-                              <AnimatePresence>
-                                {copyDropdownId === u.id && (
-                                  <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} style={{ position: 'absolute', top: '100%', right: 0, zIndex: 1100, background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '12px', padding: '8px', width: '200px', boxShadow: '0 20px 40px rgba(0,0,0,0.5)', marginTop: '8px' }}>
-                                    {[
-                                      { id: 'url', label: 'Copy URL', desc: 'Plain short link' },
-                                      { id: 'markdown', label: 'Markdown', desc: 'Link with title' },
-                                      { id: 'html', label: 'HTML', desc: 'Anchor tag' },
-                                      { id: 'original', label: 'Original URL', desc: 'Destination link' }
-                                    ].map(opt => (
-                                      <button key={opt.id} onClick={() => handleCopy(u, opt.id as any)} className="dropdown-item" style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', padding: '10px 12px', borderRadius: '8px', cursor: 'pointer', color: '#fff', fontSize: '12px', fontWeight: 600, transition: 'all 0.2s' }}>
-                                        <div style={{ fontWeight: 800 }}>{opt.label}</div>
-                                        <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{opt.desc}</div>
-                                      </button>
-                                    ))}
-                                  </motion.div>
-                                )}
-                              </AnimatePresence>
-                            </div>
-                            <button onClick={() => setSelectedQR(u.shortUrl)} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: '6px', padding: '6px 10px', color: 'var(--text-muted)', cursor: 'pointer' }}><QrCode size={14} /></button>
-                            <Link to={`/analytics/${u.shortCode}`} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: '6px', padding: '6px 10px', color: 'var(--text-muted)', display: 'flex' }}><BarChart2 size={14} /></Link>
-                            <button onClick={() => handleDelete(u.shortCode, u.id)} style={{ background: 'none', border: '1px solid #311', color: '#ff4444', borderRadius: '6px', padding: '6px 10px', cursor: 'pointer' }}><Trash2 size={14} /></button>
-                          </div>
-                        </td>
-                      </motion.tr>
+                <thead>
+                  <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--border)' }}>
+                    {['SHORT URL', 'ORIGINAL DESTINATION', 'HEALTH', 'STATUS', 'CLICKS', 'ACTIONS'].map(h => (
+                      <th key={h} style={{ padding: '20px', fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{h}</th>
                     ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {pinnedUrls.length > 0 && (
+                    <>
+                      <tr style={{ background: 'none' }}>
+                        <td colSpan={6} style={{ padding: '8px 28px', borderBottom: '1px solid var(--border)' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <span style={{ fontSize: '10px', fontWeight: 800, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.2em' }}>PINNED</span>
+                            <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
+                          </div>
+                        </td>
+                      </tr>
+                      <AnimatePresence mode="popLayout">
+                        {pinnedUrls.map(u => renderUrlRow(u, true))}
+                      </AnimatePresence>
+                      <tr style={{ background: 'none' }}>
+                        <td colSpan={6} style={{ padding: '8px 28px', borderBottom: '1px solid var(--border)' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <span style={{ fontSize: '10px', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.2em' }}>ALL LINKS</span>
+                            <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
+                          </div>
+                        </td>
+                      </tr>
+                    </>
+                  )}
+                  <AnimatePresence mode="popLayout">
+                    {otherUrls.map(u => renderUrlRow(u))}
                   </AnimatePresence>
                 </tbody>
               </table>

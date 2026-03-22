@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
-  Save, Layout, Link2, Palette, Globe, Check, AlertCircle, 
+  Save, Layout as LayoutIcon, Link2, Palette, Globe, Check, AlertCircle, 
   Trash2, GripVertical, Plus, ExternalLink, Eye, Copy,
   Smartphone, Monitor, User
 } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import api from '../lib/api'
-import Sidebar from '../components/Sidebar'
+import Layout from '../components/Layout'
 import { 
   DndContext, closestCenter, KeyboardSensor, PointerSensor, 
   useSensor, useSensors, DragEndEvent 
@@ -226,10 +226,8 @@ export default function BioSettings() {
   if (loading) return null
 
   return (
-    <div className="dashboard-container">
-      <Sidebar />
-      
-      <main style={{ flex: 1, padding: '40px', display: 'flex', gap: '40px', minWidth: 0 }}>
+    <Layout>
+      <div style={{ padding: '40px', display: 'flex', gap: '40px', minWidth: 0 }}>
         <div style={{ flex: 1, minWidth: 0 }}>
           <header style={{ marginBottom: '40px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
             <div>
@@ -469,14 +467,14 @@ export default function BioSettings() {
               <Eye size={12} style={{ marginRight: '6px' }} /> LIVE PREVIEW
            </div>
         </div>
-      </main>
+      </div>
 
       <style>{`
-        .settings-field { display: flex; flexDirection: column; gap: 8px; }
-        .settings-field label { fontSize: 10px; fontWeight: 900; color: var(--text-muted); letterSpacing: 0.1em; }
+        .settings-field { display: flex; flex-direction: column; gap: 8px; }
+        .settings-field label { font-size: 10px; font-weight: 900; color: var(--text-muted); letter-spacing: 0.1em; }
         .settings-field input, .settings-field textarea {
           background: var(--bg-secondary); border: 1px solid var(--border);
-          borderRadius: 12px; padding: 14px 16px; color: #fff; fontSize: 14px;
+          border-radius: 12px; padding: 14px 16px; color: #fff; font-size: 14px;
           transition: border-color 0.2s; width: 100%;
         }
         .settings-field input:focus { border-color: var(--accent); outline: none; }
@@ -490,9 +488,9 @@ export default function BioSettings() {
         
         .preview-container.mobile {
           width: 320px; height: 600px; margin: 0 auto;
-          border: 12px solid #1a1a1a; borderRadius: 40px;
+          border: 12px solid #1a1a1a; border-radius: 40px;
           overflow: hidden; background: #000;
-          boxShadow: 0 40px 100px rgba(0,0,0,0.8);
+          box-shadow: 0 40px 100px rgba(0,0,0,0.8);
         }
         .preview-screen { width: 100%; height: 100%; overflow-y: auto; }
         .preview-screen::-webkit-scrollbar { width: 0; }
@@ -500,7 +498,7 @@ export default function BioSettings() {
         .loader-small { width: 14px; height: 14px; border: 2px solid #333; border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
       `}</style>
-    </div>
+    </Layout>
   )
 }
 

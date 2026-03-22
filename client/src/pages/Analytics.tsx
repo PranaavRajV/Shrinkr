@@ -196,13 +196,34 @@ export default function Analytics() {
           </div>
         </div>
 
-        {/* Quick Stats Grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '40px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '20px', marginBottom: '40px' }}>
           {[
             { label: 'Total Clicks', val: totalClicks, icon: MousePointer2, color: 'var(--accent)' },
-            { label: 'Real Clicks', val: realClicks, icon: ShieldCheck, color: '#fff' },
             { 
-              label: 'Click Goal Progress', 
+              label: 'VERIFIED CLICKS', 
+              val: realClicks, 
+              icon: () => (
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                  <polyline points="22 4 12 14.01 9 11.01" />
+                </svg>
+              ), 
+              color: 'var(--accent)' 
+            },
+            { 
+              label: 'BOT CLICKS FILTERED', 
+              val: botClicks, 
+              icon: () => (
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                  <path d="M12 8v4" />
+                  <path d="M12 16h.01" />
+                </svg>
+              ), 
+              color: '#ff4444' 
+            },
+            { 
+              label: 'CLICK GOAL PROGRESS', 
               val: data.clickGoal ? Math.round((totalClicks / data.clickGoal) * 100) : 0, 
               label_val: data.clickGoal ? `${Math.round((totalClicks / data.clickGoal) * 100)}%` : 'NO GOAL',
               icon: Trophy, 
@@ -210,35 +231,38 @@ export default function Analytics() {
               sub: data.clickGoal ? `${totalClicks} / ${data.clickGoal} target` : 'Set a goal to track'
             },
             { label: 'Last Human Visit', val: 0, label_val: lastVisited, icon: Clock, color: '#fff' },
-          ].map((s, i) => (
-            <Reveal key={i} delay={0.4 + (i * 0.1)} direction="up" distance={10}>
-              <Card3D>
-                <div style={{ ...S.card, padding: '24px' }}>
-                  <div style={{ position: 'absolute', top: '20px', right: '20px', color: s.color, opacity: 0.4 }}>
-                    <s.icon size={20} />
-                  </div>
-                  <div style={S.label}>{s.label}</div>
-                  <div style={{ fontSize: s.label_val ? '18px' : '36px', fontWeight: 900, color: s.color }}>
-                    {s.label_val ? s.label_val : <CountUp value={s.val} />}
-                  </div>
-                  {s.sub && (
-                    <div style={{ marginTop: '12px' }}>
-                       {s.label === 'Click Goal Progress' && data.clickGoal && (
-                         <div style={{ height: '4px', background: 'rgba(255,255,255,0.05)', borderRadius: '2px', overflow: 'hidden', marginBottom: '8px' }}>
-                           <motion.div 
-                            initial={{ width: 0 }} 
-                            animate={{ width: `${Math.min((totalClicks / data.clickGoal) * 100, 100)}%` }} 
-                            style={{ height: '100%', background: 'var(--accent)' }} 
-                           />
-                         </div>
-                       )}
-                       <div style={{ fontSize: '9px', fontWeight: 800, color: 'var(--text-muted)' }}>{s.sub}</div>
+          ].map((s, i) => {
+            const Icon: any = s.icon;
+            return (
+              <Reveal key={i} delay={0.4 + (i * 0.1)} direction="up" distance={10}>
+                <Card3D>
+                  <div style={{ ...S.card, padding: '24px' }}>
+                    <div style={{ position: 'absolute', top: '20px', right: '20px', color: s.color, opacity: 0.6 }}>
+                      {typeof Icon === 'function' ? Icon() : <Icon size={20} />}
                     </div>
-                  )}
-                </div>
-              </Card3D>
-            </Reveal>
-          ))}
+                    <div style={S.label}>{s.label}</div>
+                    <div style={{ fontSize: s.label_val ? '18px' : '36px', fontWeight: 900, color: s.color }}>
+                      {s.label_val ? s.label_val : <CountUp value={s.val} />}
+                    </div>
+                    {s.sub && (
+                      <div style={{ marginTop: '12px' }}>
+                        {s.label === 'CLICK GOAL PROGRESS' && data.clickGoal && (
+                            <div style={{ height: '4px', background: 'rgba(255,255,255,0.05)', borderRadius: '2px', overflow: 'hidden', marginBottom: '8px' }}>
+                              <motion.div 
+                                initial={{ width: 0 }} 
+                                animate={{ width: `${Math.min((totalClicks / data.clickGoal) * 100, 100)}%` }} 
+                                style={{ height: '100%', background: 'var(--accent)' }} 
+                              />
+                            </div>
+                        )}
+                        <div style={{ fontSize: '9px', fontWeight: 800, color: 'var(--text-muted)' }}>{s.sub}</div>
+                      </div>
+                    )}
+                  </div>
+                </Card3D>
+              </Reveal>
+            )
+          })}
         </div>
 
         {/* Main Chart Section */}
@@ -404,9 +428,11 @@ export default function Analytics() {
                       style={{
                         padding: '6px 14px', fontSize: '9px', fontWeight: 900,
                         border: 'none', borderRadius: '6px',
-                        background: clickFilter === f.toLowerCase() ? 'rgba(255,255,255,0.05)' : 'transparent',
-                        color: clickFilter === f.toLowerCase() ? 'var(--accent)' : 'var(--text-muted)',
-                        cursor: 'pointer', transition: 'all 0.2s', letterSpacing: '0.05em'
+                        background: clickFilter === f.toLowerCase() ? (
+                          f === 'REAL' ? 'var(--accent)' : f === 'BOTS' ? 'rgba(255,68,68,0.15)' : 'rgba(255,255,255,0.08)'
+                        ) : 'transparent',
+                        color: clickFilter === f.toLowerCase() ? (f === 'REAL' ? '#000' : f === 'BOTS' ? '#ff4444' : '#fff') : 'var(--text-muted)',
+                        cursor: 'pointer', transition: 'all 150ms cubic-bezier(0.4, 0, 0.2, 1)', letterSpacing: '0.05em'
                       }}
                     >
                       {f}
@@ -431,23 +457,46 @@ export default function Analytics() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredClicks.map((c: any, i: number) => (
-                    <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)', opacity: c.isBot ? 0.4 : 1, transition: 'opacity 0.3s' }}>
-                      <td style={{ padding: '16px', fontSize: '13px', color: '#fff', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        {format(new Date(c.timestamp), 'MMM dd, HH:mm:ss')}
-                        {c.isBot && (
-                          <span style={{ fontSize: '8px', fontWeight: 900, background: '#311', color: '#ff4444', padding: '2px 6px', borderRadius: '4px', border: '1px solid #511' }} title={c.botReason || 'Detected as bot'}>BOT</span>
-                        )}
+                  {filteredClicks.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} style={{ padding: '100px 0' }}>
+                        <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '11px', fontWeight: 800, letterSpacing: '0.1em' }}>
+                          NO CLICKS MATCHING FILTER
+                        </div>
                       </td>
-                      <td style={{ padding: '16px', fontSize: '13px', color: 'var(--text-muted)', fontFamily: 'monospace' }}>{c.ip?.replace(/\.[0-9]+\.[0-9]+$/, '.X.X')}</td>
-                      <td style={{ padding: '16px', fontSize: '13px', color: '#fff' }}>{c.country || 'Unknown'}</td>
-                      <td style={{ padding: '16px', fontSize: '13px', color: 'var(--text-secondary)' }}>
-                        {c.isBot ? <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Cpu size={12} /> {c.browser}</span> : c.browser || 'Other'}
-                      </td>
-                      <td style={{ padding: '16px', fontSize: '13px', color: 'var(--text-secondary)' }}>{c.device?.toUpperCase()}</td>
-                      <td style={{ padding: '16px', fontSize: '13px', color: 'var(--text-muted)', maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.referrer || 'DIRECT'}</td>
                     </tr>
-                  ))}
+                  ) : (
+                    filteredClicks.map((c: any, i: number) => (
+                      <motion.tr 
+                        key={i} 
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: i * 0.03 }}
+                        style={{ borderBottom: '1px solid rgba(255,255,255,0.03)', opacity: c.isBot ? 0.4 : 1 }}
+                      >
+                        <td style={{ padding: '16px', fontSize: '12px', color: '#fff' }}>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            {format(new Date(c.timestamp), 'MMM dd, HH:mm:ss')}
+                            {c.isBot && (
+                              <span style={{ 
+                                fontSize: '8px', fontWeight: 900, 
+                                background: 'rgba(255,68,68,0.1)', color: '#ff4444', 
+                                padding: '2px 6px', borderRadius: '2px', letterSpacing: '0.1em',
+                                border: '1px solid rgba(255,68,68,0.2)'
+                              }} title={c.botReason || 'Detected as bot'}>BOT</span>
+                            )}
+                          </span>
+                        </td>
+                        <td style={{ padding: '16px', fontSize: '12px', color: 'var(--text-muted)', fontFamily: 'Space Grotesk' }}>{c.ip?.replace(/\.[0-9]+\.[0-9]+$/, '.X.X')}</td>
+                        <td style={{ padding: '16px', fontSize: '12px', color: '#fff', fontWeight: 600 }}>{c.country || 'Unknown'}</td>
+                        <td style={{ padding: '16px', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                          {c.isBot ? <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#ff4444' }}><Cpu size={12} /> {c.browser}</span> : c.browser || 'Other'}
+                        </td>
+                        <td style={{ padding: '16px', fontSize: '12px', color: 'var(--text-secondary)' }}>{c.device?.toUpperCase()}</td>
+                        <td style={{ padding: '16px', fontSize: '12px', color: 'var(--text-muted)', maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontStyle: 'italic' }}>{c.referrer || 'DIRECT'}</td>
+                      </motion.tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>

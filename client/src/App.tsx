@@ -2,7 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-route
 import { Toaster } from 'react-hot-toast'
 import { AuthProvider } from './contexts/AuthContext'
 import { Suspense, lazy, Component } from 'react'
-import Cursor from './components/Cursor'
+import FireCursor from './components/FireCursor'
 import PageLoader from './components/PageLoader'
 import { useSmoothScroll } from './hooks/useSmoothScroll'
 import { motion, AnimatePresence, useScroll, useSpring } from 'framer-motion'
@@ -194,7 +194,7 @@ export function App() {
 export function AppWrapper() {
   return (
     <>
-      <Cursor />
+      <FireCursor />
       <BrowserRouter>
         <App />
       </BrowserRouter>

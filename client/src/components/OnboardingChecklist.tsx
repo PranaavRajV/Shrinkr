@@ -19,6 +19,7 @@ export default function OnboardingChecklist({ urls }: Props) {
   const [completedSteps, setCompletedSteps] = useState<string[]>([])
   const [isExpanded, setIsExpanded] = useState(true)
   const [isVisible, setIsVisible] = useState(true)
+  const [isDismissing, setIsDismissing] = useState(false)
   const navigate = useNavigate()
 
   const steps: Step[] = [
@@ -26,7 +27,7 @@ export default function OnboardingChecklist({ urls }: Props) {
       id: 'create_link', 
       label: 'Create your first short link', 
       description: 'Shorten any URL using the form above',
-      action: { label: 'CREATE LINK', onClick: () => window.scrollTo({ top: 300, behavior: 'smooth' }) }
+      action: { label: 'CREATE LINK', onClick: () => window.scroll({ top: 300, behavior: 'smooth' }) }
     },
     { 
       id: 'copy_link', 
@@ -81,6 +82,17 @@ export default function OnboardingChecklist({ urls }: Props) {
       changed = true
     }
 
+    // New: Check if all done
+    if (newCompletions.length === steps.length && !completedSteps.includes(steps[steps.length-1].id)) {
+      setTimeout(() => {
+        setIsDismissing(true)
+        setTimeout(() => {
+          setIsVisible(false)
+          localStorage.setItem('shrinkr_onboarding_hidden', 'true')
+        }, 3000)
+      }, 2000)
+    }
+
     if (changed) {
       setCompletedSteps(newCompletions)
       localStorage.setItem('shrinkr_onboarding', JSON.stringify(newCompletions))
@@ -89,150 +101,154 @@ export default function OnboardingChecklist({ urls }: Props) {
   }, [urls, completedSteps])
 
   const handleDismiss = () => {
-    if (confirm('Hide the getting started checklist forever?')) {
-      setIsVisible(false)
-      localStorage.setItem('shrinkr_onboarding_hidden', 'true')
-    }
+    setIsVisible(false)
+    localStorage.setItem('shrinkr_onboarding_hidden', 'true')
   }
 
   const progress = (completedSteps.length / steps.length) * 100
   const allDone = completedSteps.length === steps.length
 
-  if (!isVisible || (allDone && !isExpanded)) return null
+  if (!isVisible) return null
 
   return (
     <motion.div
       initial={{ opacity: 0, y: -20 }}
-      animate={{ opacity: 1, y: 0 }}
+      animate={isDismissing ? { opacity: 0, y: -20 } : { opacity: 1, y: 0 }}
       className="neo-card"
       style={{ 
-        padding: '24px', 
+        padding: 0, 
         marginBottom: '48px', 
-        background: 'rgba(255,255,255,0.01)',
+        border: '1px solid var(--border)',
         overflow: 'hidden'
       }}
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: isExpanded ? '24px' : '0' }}>
-        <div style={{ flex: 1 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-            <h3 style={{ fontSize: '11px', fontWeight: 900, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.15em' }}>
-              GETTING STARTED
-            </h3>
-            <span style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)' }}>
-              {completedSteps.length} / {steps.length} COMPLETED
-            </span>
-          </div>
-          <div style={{ width: '100%', maxWidth: '300px', height: '4px', background: 'rgba(255,255,255,0.05)', borderRadius: '2px', position: 'relative' }}>
+      <div 
+        onClick={() => setIsExpanded(!isExpanded)}
+        style={{ 
+          padding: '14px 28px', display: 'flex', alignItems: 'center', 
+          justifyContent: 'space-between', cursor: 'pointer' 
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <span style={{ fontSize: '10px', fontWeight: 900, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.2em' }}>
+            GETTING STARTED
+          </span>
+          <div style={{ width: '80px', height: '3px', background: 'var(--border)', marginLeft: '12px', overflow: 'hidden' }}>
             <motion.div 
-              style={{ height: '100%', background: 'var(--accent)', borderRadius: '2px' }}
               initial={{ width: 0 }}
               animate={{ width: `${progress}%` }}
-              transition={{ type: 'spring', stiffness: 50, damping: 20 }}
+              transition={{ duration: 0.5, ease: 'easeOut' }}
+              style={{ height: '100%', background: 'var(--accent)' }}
             />
           </div>
+          <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--accent)', marginLeft: '8px' }}>
+            {completedSteps.length}/{steps.length}
+          </span>
         </div>
 
-        <div style={{ display: 'flex', gap: '12px' }}>
-          <button onClick={() => setIsExpanded(!isExpanded)} style={{ background: 'none', border: 'none', color: '#444', cursor: 'pointer', padding: '8px' }}>
-            {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-          </button>
-          <button onClick={handleDismiss} style={{ background: 'none', border: 'none', color: '#444', cursor: 'pointer', padding: '8px' }}>
-            <X size={18} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <motion.div animate={{ rotate: isExpanded ? 0 : 180 }} transition={{ duration: 0.3 }}>
+            <ChevronDown size={16} color="var(--text-muted)" />
+          </motion.div>
+          <button 
+            onClick={(e) => { e.stopPropagation(); handleDismiss() }} 
+            style={{ background: 'none', border: 'none', color: '#444', cursor: 'pointer', padding: '4px' }}
+          >
+            <X size={16} />
           </button>
         </div>
       </div>
 
       <AnimatePresence>
-        {isExpanded && (
+        {isExpanded && !allDone && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}
           >
             {steps.map((step, idx) => {
               const isDone = completedSteps.includes(step.id)
               return (
-                <motion.div
+                <div
                   key={step.id}
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: idx * 0.05 }}
                   style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: '20px', 
-                    padding: '16px',
-                    background: isDone ? 'none' : 'rgba(255,255,255,0.02)',
-                    borderRadius: '12px',
-                    border: '1px solid transparent',
-                    borderColor: isDone ? 'transparent' : 'rgba(255,255,255,0.03)'
+                    padding: '12px 28px', borderTop: idx === 0 ? 'none' : '1px solid var(--border)',
+                    display: 'flex', alignItems: 'center', gap: '14px'
                   }}
                 >
                   <motion.div
-                    animate={isDone ? { scale: [1, 1.2, 1], rotate: [0, 10, 0] } : {}}
+                    initial={false}
+                    animate={isDone ? { scale: [1, 1.3, 1], backgroundColor: 'var(--accent)', borderColor: 'var(--accent)' } : {}}
+                    transition={{ type: 'spring', stiffness: 300, damping: 15 }}
                     style={{
-                      width: '24px', height: '24px', borderRadius: '50%',
-                      border: `2px solid ${isDone ? 'var(--accent)' : '#333'}`,
-                      background: isDone ? 'var(--accent)' : 'none',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      color: '#000', flexShrink: 0, transition: 'all 0.3s'
+                      width: '20px', height: '20px', borderRadius: '50%',
+                      border: '1.5px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      flexShrink: 0
                     }}
                   >
-                    {isDone && <Check size={14} strokeWidth={4} />}
+                    {isDone && <Check size={10} color="#000" strokeWidth={4} />}
                   </motion.div>
 
                   <div style={{ flex: 1 }}>
                     <div style={{ 
-                      fontSize: '14px', 
-                      fontWeight: 700, 
+                      fontSize: '13px', fontWeight: 600, 
                       color: isDone ? 'var(--text-muted)' : '#fff',
                       textDecoration: isDone ? 'line-through' : 'none',
+                      textDecorationColor: isDone ? 'var(--text-muted)' : 'transparent',
                       transition: 'all 0.3s'
                     }}>
                       {step.label}
                     </div>
-                    {!isDone && (
-                      <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
-                        {step.description}
-                      </div>
-                    )}
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px', opacity: isDone ? 0.5 : 1 }}>
+                      {step.description}
+                    </div>
                   </div>
 
-                  {step.action && !isDone && (
+                  {isDone ? (
+                    <span style={{ fontSize: '10px', fontWeight: 900, color: 'var(--accent)', letterSpacing: '0.05em' }}>DONE</span>
+                  ) : step.action ? (
                     <button
-                      onClick={step.action.onClick}
+                      onClick={(e) => { e.stopPropagation(); step.action?.onClick() }}
                       style={{
-                        background: 'rgba(203,255,0,0.1)', color: 'var(--accent)',
-                        border: '1px solid rgba(203,255,0,0.2)', padding: '8px 16px',
-                        borderRadius: '8px', fontSize: '10px', fontWeight: 900, cursor: 'pointer'
+                        background: 'none', border: '1px solid var(--border)', color: 'var(--text-muted)',
+                        padding: '6px 12px', borderRadius: '6px', fontSize: '10px', fontWeight: 800, cursor: 'pointer'
                       }}
                     >
                       {step.action.label}
                     </button>
-                  )}
-                  {isDone && (
-                    <span style={{ fontSize: '10px', fontWeight: 900, color: 'var(--accent)', opacity: 0.5 }}>DONE</span>
-                  )}
-                </motion.div>
+                  ) : null}
+                </div>
               )
             })}
+          </motion.div>
+        )}
 
-            {allDone && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                style={{ 
-                  textAlign: 'center', padding: '40px', background: 'rgba(203,255,0,0.05)', 
-                  borderRadius: '16px', border: '1px solid var(--accent)', marginTop: '20px' 
-                }}
-              >
-                <div style={{ fontSize: '24px', fontWeight: 900, color: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
-                  <Sparkles size={24} /> ALL DONE! <Sparkles size={24} />
-                </div>
-                <p style={{ color: '#fff', fontSize: '14px', marginTop: '8px', fontWeight: 600 }}>You're a Shrinkr pro now.</p>
-              </motion.div>
-            )}
+        {isExpanded && allDone && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            style={{ textAlign: 'center', padding: '24px 28px' }}
+          >
+            <style>{`
+              @keyframes drawCheck {
+                to { stroke-dashoffset: 0; }
+              }
+            `}</style>
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" style={{ margin: '0 auto 12px' }}>
+              <circle cx="12" cy="12" r="10" stroke="var(--accent)" strokeWidth="2" />
+              <path 
+                d="M7 13l3 3 7-7" 
+                stroke="var(--accent)" 
+                strokeWidth="3" 
+                strokeLinecap="round" 
+                strokeLinejoin="round"
+                strokeDasharray="20"
+                strokeDashoffset="20"
+                style={{ animation: 'drawCheck 0.5s ease-out forwards 0.2s' }}
+              />
+            </svg>
+            <div style={{ fontSize: '18px', fontWeight: 900, color: 'var(--accent)', letterSpacing: '0.1em' }}>ALL DONE!</div>
+            <p style={{ color: 'var(--text-muted)', fontSize: '12px', marginTop: '4px' }}>You're a Shrinkr pro now.</p>
           </motion.div>
         )}
       </AnimatePresence>

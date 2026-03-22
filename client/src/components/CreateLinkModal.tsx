@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Link2, Tag, Calendar, Copy, Check, ExternalLink, Lock, Loader2, AlertCircle, ChevronDown, ChevronUp, Settings2, Globe, Smartphone, Tablet, MousePointer2 } from 'lucide-react'
+import { X, Link2, Tag, Calendar, Copy, Check, ExternalLink, Lock, Loader2, AlertCircle, ChevronDown, ChevronUp, Settings2, Globe, Smartphone, Tablet, MousePointer2, Eye, EyeOff } from 'lucide-react'
 import api from '../lib/api'
 import toast from 'react-hot-toast'
 import Magnetic from './Magnetic'
@@ -18,6 +18,8 @@ export default function CreateLinkModal({ onClose, onSuccess }: Props) {
   const [linkPassword, setLinkPassword] = useState('')
   const [tags, setTags] = useState<string[]>([])
   const [tagInput, setTagInput] = useState('')
+  const [isTagsFocused, setIsTagsFocused] = useState(false)
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false)
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<any>(null)
   const [copied, setCopied] = useState(false)
@@ -313,36 +315,62 @@ export default function CreateLinkModal({ onClose, onSuccess }: Props) {
               {(suggesting || suggestions.length > 0) && (
                 <div style={{ marginTop: '12px', marginBottom: '4px' }}>
                   {suggesting && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-muted)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.15em', fontWeight: 900 }}>
-                      <Loader2 size={12} className="animate-spin" color="var(--accent)" />
-                      AI suggesting...
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '10px' }}>
+                      <style>{`
+                        @keyframes dotPulse {
+                          0%, 100% { transform: scale(0.5); opacity: 0.5; }
+                          50% { transform: scale(1); opacity: 1; }
+                        }
+                      `}</style>
+                      <div style={{ display: 'flex', gap: '4px' }}>
+                        {[0, 150, 300].map(delay => (
+                          <div key={delay} style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--accent)', animation: `dotPulse 1s infinite ${delay}ms` }} />
+                        ))}
+                      </div>
+                      <span style={{ fontSize: '10px', fontWeight: 900, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.2em' }}>
+                        AI THINKING...
+                      </span>
                     </div>
                   )}
                   {!suggesting && suggestions.length > 0 && (
                     <div>
-                      <div style={{ fontSize: '10px', fontWeight: 900, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.2em', marginBottom: '10px', opacity: 0.6 }}>
-                        AI SUGGESTIONS — CLICK TO USE
+                      <div style={{ fontSize: '10px', fontWeight: 900, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.2em', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="var(--accent)"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                        AI SUGGESTIONS <span style={{ opacity: 0.5, fontWeight: 500 }}>— CLICK TO USE</span>
                       </div>
                       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                        {suggestions.map((s) => (
-                          <button
-                            key={s}
-                            type="button"
-                            onClick={() => {
-                              setCustomAlias(s)
-                              setSuggestions([])
-                            }}
-                            style={{ 
-                              background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', 
-                              borderRadius: '8px', padding: '6px 14px', fontSize: '11px', fontWeight: 800,
-                              color: '#fff', textTransform: 'uppercase', letterSpacing: '0.08em', cursor: 'pointer',
-                              transition: 'all 0.2s'
-                            }}
-                            className="suggestion-btn"
-                          >
-                            {s}
-                          </button>
-                        ))}
+                        <AnimatePresence>
+                          {suggestions.map((s, i) => (
+                            <motion.button
+                              key={s}
+                              type="button"
+                              initial={{ opacity: 0, y: 8 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ delay: i * 0.08 }}
+                              onClick={() => {
+                                setCustomAlias(s)
+                                setSuggestions([])
+                                const el = document.getElementById('custom-alias-input')
+                                el?.focus()
+                                el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                              }}
+                              style={{ 
+                                background: 'none', border: '1px solid var(--border)', 
+                                borderRadius: 'var(--radius-sm)', padding: '8px 16px', fontSize: '11px', fontWeight: 800,
+                                color: '#fff', textTransform: 'uppercase', letterSpacing: '0.08em', cursor: 'pointer',
+                                transition: 'all 150ms ease'
+                              }}
+                              whileHover={{ 
+                                backgroundColor: 'var(--accent)', 
+                                color: '#000',
+                                translateY: -1
+                              }}
+                              whileTap={{ scale: 0.95 }}
+                            >
+                              {s}
+                            </motion.button>
+                          ))}
+                        </AnimatePresence>
                       </div>
                     </div>
                   )}
@@ -372,7 +400,7 @@ export default function CreateLinkModal({ onClose, onSuccess }: Props) {
                       exit={{ height: 0, opacity: 0 }}
                       style={{ overflow: 'hidden' }}
                     >
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', padding: '16px', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', marginTop: '8px', border: '1px solid #1a1a1a' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', padding: '24px', background: 'var(--bg-secondary)', borderRadius: '16px', marginTop: '12px', border: '1px solid var(--border)' }}>
                         {[
                           { key: 'source', label: 'Source', placeholder: 'twitter, newsletter' },
                           { key: 'medium', label: 'Medium', placeholder: 'social, email' },
@@ -381,21 +409,27 @@ export default function CreateLinkModal({ onClose, onSuccess }: Props) {
                           { key: 'content', label: 'Content', placeholder: 'sidebar-link' },
                         ].map(f => (
                           <div key={f.key} style={{ gridColumn: f.key === 'content' ? 'span 2' : 'auto' }}>
-                            <label style={{ fontSize: '9px', fontWeight: 800, color: '#555', textTransform: 'uppercase', marginBottom: '6px', display: 'block' }}>{f.label}</label>
+                            <label style={{ fontSize: '10px', fontWeight: 900, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '8px', display: 'block' }}>{f.label}</label>
                             <input
                               type="text"
                               placeholder={f.placeholder}
                               value={(utm as any)[f.key]}
                               onChange={e => setUtm({ ...utm, [f.key]: e.target.value })}
-                              style={{ width: '100%', background: '#080808', border: '1px solid #1a1a1a', color: '#fff', fontSize: '12px', padding: '10px 12px', borderRadius: '8px', outline: 'none' }}
+                              style={{ 
+                                width: '100%', background: 'transparent', border: 'none', borderBottom: '1px solid var(--border)', 
+                                color: '#fff', fontSize: '12px', padding: '10px 0', borderRadius: 0, outline: 'none',
+                                transition: 'border-color 0.2s'
+                              }}
+                              onFocus={(e) => e.target.style.borderBottomColor = 'var(--accent)'}
+                              onBlur={(e) => e.target.style.borderBottomColor = 'var(--border)'}
                             />
                           </div>
                         ))}
                         
                         {originalUrl && (Object.values(utm).some(v => v)) && (
-                          <div style={{ gridColumn: 'span 2', marginTop: '12px', padding: '12px', borderTop: '1px solid #1a1a1a' }}>
-                            <label style={{ fontSize: '9px', fontWeight: 800, color: 'var(--accent)', textTransform: 'uppercase', marginBottom: '8px', display: 'block' }}>Final URL Preview</label>
-                            <div style={{ fontSize: '11px', color: '#777', wordBreak: 'break-all', fontFamily: 'monospace', lineHeight: 1.5 }}>
+                          <div style={{ gridColumn: 'span 2', marginTop: '12px', padding: '16px', borderTop: '1px solid var(--border)', background: 'rgba(0,0,0,0.2)', borderRadius: '8px' }}>
+                            <label style={{ fontSize: '9px', fontWeight: 900, color: 'var(--accent)', textTransform: 'uppercase', marginBottom: '8px', display: 'block', letterSpacing: '0.1em' }}>Final URL Preview</label>
+                            <div style={{ fontSize: '10px', color: 'var(--text-muted)', wordBreak: 'break-all', fontFamily: 'monospace', lineHeight: 1.6 }}>
                               {buildUtmUrl(originalUrl)}
                             </div>
                           </div>
@@ -429,12 +463,16 @@ export default function CreateLinkModal({ onClose, onSuccess }: Props) {
                       exit={{ height: 0, opacity: 0 }}
                       style={{ overflow: 'hidden' }}
                     >
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '16px', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', marginTop: '8px', border: '1px solid #1a1a1a' }}>
+                      <div style={{ 
+                        display: 'flex', flexDirection: 'column', gap: '20px', padding: '24px', 
+                        background: 'var(--bg-secondary)', borderRadius: '16px', marginTop: '12px', 
+                        border: '1px solid var(--border)' 
+                      }}>
                         
                         {/* DEVICE TARGETING */}
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
                           <div>
-                            <label style={{ fontSize: '9px', fontWeight: 800, color: '#555', textTransform: 'uppercase', marginBottom: '6px', display: 'block' }}>
+                            <label style={{ fontSize: '10px', fontWeight: 900, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '8px', display: 'block' }}>
                               <Smartphone size={10} style={{ verticalAlign: 'middle', marginRight: '4px' }} /> Mobile URL
                             </label>
                             <input
@@ -442,11 +480,17 @@ export default function CreateLinkModal({ onClose, onSuccess }: Props) {
                               placeholder="https://mobile.app/..."
                               value={targeting.mobile}
                               onChange={e => setTargeting({ ...targeting, mobile: e.target.value })}
-                              style={{ width: '100%', background: '#080808', border: '1px solid #1a1a1a', color: '#fff', fontSize: '11px', padding: '10px 12px', borderRadius: '8px', outline: 'none' }}
+                              style={{ 
+                                width: '100%', background: 'transparent', border: 'none', borderBottom: '1px solid var(--border)', 
+                                color: '#fff', fontSize: '12px', padding: '10px 0', borderRadius: 0, outline: 'none',
+                                transition: 'border-color 0.2s'
+                              }}
+                              onFocus={(e) => e.target.style.borderBottomColor = 'var(--accent)'}
+                              onBlur={(e) => e.target.style.borderBottomColor = 'var(--border)'}
                             />
                           </div>
                           <div>
-                            <label style={{ fontSize: '9px', fontWeight: 800, color: '#555', textTransform: 'uppercase', marginBottom: '6px', display: 'block' }}>
+                            <label style={{ fontSize: '10px', fontWeight: 900, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '8px', display: 'block' }}>
                               <Tablet size={10} style={{ verticalAlign: 'middle', marginRight: '4px' }} /> Tablet URL
                             </label>
                             <input
@@ -454,50 +498,86 @@ export default function CreateLinkModal({ onClose, onSuccess }: Props) {
                               placeholder="https://tablet.app/..."
                               value={targeting.tablet}
                               onChange={e => setTargeting({ ...targeting, tablet: e.target.value })}
-                              style={{ width: '100%', background: '#080808', border: '1px solid #1a1a1a', color: '#fff', fontSize: '11px', padding: '10px 12px', borderRadius: '8px', outline: 'none' }}
+                              style={{ 
+                                width: '100%', background: 'transparent', border: 'none', borderBottom: '1px solid var(--border)', 
+                                color: '#fff', fontSize: '12px', padding: '10px 0', borderRadius: 0, outline: 'none',
+                                transition: 'border-color 0.2s'
+                              }}
+                              onFocus={(e) => e.target.style.borderBottomColor = 'var(--accent)'}
+                              onBlur={(e) => e.target.style.borderBottomColor = 'var(--border)'}
                             />
                           </div>
                         </div>
 
                         {/* COUNTRY TARGETING */}
-                        <div style={{ borderTop: '1px solid #1a1a1a', paddingTop: '16px', marginTop: '4px' }}>
-                          <label style={{ fontSize: '9px', fontWeight: 800, color: '#555', textTransform: 'uppercase', marginBottom: '12px', display: 'block' }}>Country Rules (Max 5)</label>
+                        <div style={{ borderTop: '1px solid var(--border)', paddingTop: '20px' }}>
+                          <label style={{ fontSize: '10px', fontWeight: 900, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '16px', display: 'block' }}>Country Rules (Max 5)</label>
                           
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: targeting.countries.length > 0 ? '16px' : 0 }}>
-                            {targeting.countries.map((c: any) => (
-                              <div key={c.code} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#0a0a0a', padding: '8px 12px', borderRadius: '8px', border: '1px solid #1a1a1a' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                  <span style={{ fontSize: '12px', fontWeight: 900, color: 'var(--accent)', background: 'rgba(203,255,0,0.1)', padding: '2px 6px', borderRadius: '4px' }}>{c.code}</span>
-                                  <span style={{ fontSize: '11px', color: '#666', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.url}</span>
-                                </div>
-                                <button type="button" onClick={() => removeCountryTarget(c.code)} style={{ background: 'none', border: 'none', color: '#ff4444', cursor: 'pointer' }}><X size={12} /></button>
-                              </div>
-                            ))}
+                            <AnimatePresence>
+                              {targeting.countries.map((c: any) => (
+                                <motion.div 
+                                  key={c.code}
+                                  initial={{ opacity: 0, x: -10 }}
+                                  animate={{ opacity: 1, x: 0 }}
+                                  exit={{ opacity: 0, x: 10 }}
+                                  style={{ 
+                                    display: 'flex', justifyContent: 'space-between', alignItems: 'center', 
+                                    background: 'rgba(0,0,0,0.2)', padding: '10px 16px', borderRadius: '8px', 
+                                    border: '1px solid var(--border)' 
+                                  }}
+                                >
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                    <span style={{ fontSize: '11px', fontWeight: 900, color: 'var(--accent)', background: 'var(--accent-soft)', padding: '4px 8px', borderRadius: '4px', letterSpacing: '0.05em' }}>{c.code}</span>
+                                    <span style={{ fontSize: '12px', color: 'var(--text-secondary)', maxWidth: '240px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'monospace' }}>{c.url}</span>
+                                  </div>
+                                  <button type="button" onClick={() => removeCountryTarget(c.code)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}><X size={14} /></button>
+                                </motion.div>
+                              ))}
+                            </AnimatePresence>
                           </div>
 
                           {targeting.countries.length < 5 && (
-                            <div style={{ display: 'flex', gap: '8px' }}>
-                              <input
-                                type="text"
-                                placeholder="US"
-                                maxLength={2}
-                                value={countryCode}
-                                onChange={e => setCountryCode(e.target.value.toUpperCase())}
-                                style={{ width: '48px', background: '#080808', border: '1px solid #1a1a1a', color: '#fff', fontSize: '11px', padding: '10px 8px', borderRadius: '8px', outline: 'none', textAlign: 'center' }}
-                              />
-                              <input
-                                type="text"
-                                placeholder="Destination URL"
-                                value={countryUrl}
-                                onChange={e => setCountryUrl(e.target.value)}
-                                style={{ flex: 1, background: '#080808', border: '1px solid #1a1a1a', color: '#fff', fontSize: '11px', padding: '10px 12px', borderRadius: '8px', outline: 'none' }}
-                              />
+                            <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-end' }}>
+                              <div style={{ width: '56px' }}>
+                                <input
+                                  type="text"
+                                  placeholder="US"
+                                  maxLength={2}
+                                  value={countryCode}
+                                  onChange={e => setCountryCode(e.target.value.toUpperCase())}
+                                  style={{ 
+                                    width: '100%', background: 'transparent', border: 'none', borderBottom: '1px solid var(--border)', 
+                                    color: '#fff', fontSize: '12px', padding: '10px 0', borderRadius: 0, outline: 'none', textAlign: 'center' 
+                                  }}
+                                  onFocus={(e) => e.target.style.borderBottomColor = 'var(--accent)'}
+                                  onBlur={(e) => e.target.style.borderBottomColor = 'var(--border)'}
+                                />
+                              </div>
+                              <div style={{ flex: 1 }}>
+                                <input
+                                  type="text"
+                                  placeholder="Destination URL for this country"
+                                  value={countryUrl}
+                                  onChange={e => setCountryUrl(e.target.value)}
+                                  style={{ 
+                                    width: '100%', background: 'transparent', border: 'none', borderBottom: '1px solid var(--border)', 
+                                    color: '#fff', fontSize: '12px', padding: '10px 0', borderRadius: 0, outline: 'none' 
+                                  }}
+                                  onFocus={(e) => e.target.style.borderBottomColor = 'var(--accent)'}
+                                  onBlur={(e) => e.target.style.borderBottomColor = 'var(--border)'}
+                                />
+                              </div>
                               <button
                                 type="button"
                                 onClick={addCountryTarget}
-                                style={{ background: 'var(--accent)', color: '#000', border: 'none', padding: '0 12px', borderRadius: '8px', fontSize: '10px', fontWeight: 800, cursor: 'pointer' }}
+                                style={{ 
+                                  background: 'var(--accent)', color: '#000', border: 'none', 
+                                  padding: '10px 16px', borderRadius: '8px', fontSize: '10px', 
+                                  fontWeight: 900, cursor: 'pointer', letterSpacing: '0.05em' 
+                                }}
                               >
-                                ADD
+                                ADD RULE
                               </button>
                             </div>
                           )}
@@ -557,6 +637,7 @@ export default function CreateLinkModal({ onClose, onSuccess }: Props) {
               </label>
               <div style={{ position: 'relative' }}>
                 <input
+                  id="custom-alias-input"
                   type="text"
                   placeholder="brand-link-2026"
                   value={customAlias}
@@ -565,7 +646,11 @@ export default function CreateLinkModal({ onClose, onSuccess }: Props) {
                     setCustomAlias(e.target.value.replace(/[^a-zA-Z0-9_-]/g, ''))
                     setSuggestions([])
                   }}
-                  style={{ width: '100%', background: '#0a0a0a', border: '1px solid #1a1a1a', color: '#fff', fontSize: '15px', padding: '18px 20px', borderRadius: '14px', outline: 'none' }}
+                  style={{ 
+                    width: '100%', background: '#0a0a0a', border: 'none', borderBottom: `1px solid ${aliasStatus === 'available' ? 'var(--accent)' : '#1a1a1a'}`,
+                    color: '#fff', fontSize: '15px', padding: '18px 20px', borderRadius: 0, outline: 'none',
+                    transition: 'border-color 0.3s'
+                  }}
                 />
                 <div style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   {aliasStatus === 'checking' && <Loader2 size={16} className="animate-spin" color="var(--accent)" />}
@@ -589,7 +674,13 @@ export default function CreateLinkModal({ onClose, onSuccess }: Props) {
                   value={expiresAt}
                   onChange={e => setExpiresAt(e.target.value)}
                   min={new Date().toISOString().slice(0, 16)}
-                  style={{ width: '100%', background: '#0a0a0a', border: '1px solid #1a1a1a', color: '#fff', fontSize: '14px', padding: '16px', borderRadius: '14px', colorScheme: 'dark', outline: 'none' }}
+                  style={{ 
+                    width: '100%', background: 'var(--bg)', border: 'none', borderBottom: '1px solid var(--border)', 
+                    color: '#fff', fontSize: '14px', padding: '16px 0', borderRadius: 0, colorScheme: 'dark', outline: 'none',
+                    transition: 'border-color 0.2s'
+                  }}
+                  onFocus={(e) => e.target.style.borderBottomColor = 'var(--accent)'}
+                  onBlur={(e) => e.target.style.borderBottomColor = 'var(--border)'}
                 />
               </div>
 
@@ -598,13 +689,29 @@ export default function CreateLinkModal({ onClose, onSuccess }: Props) {
                 <label style={{ fontSize: '11px', fontWeight: 900, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
                   <Lock size={13} /> Password
                 </label>
+              <div style={{ position: 'relative' }}>
+                <Lock size={14} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
                 <input
-                  type="password"
-                  placeholder="Secret key (opt)"
+                  type={isPasswordVisible ? 'text' : 'password'}
+                  placeholder="Secret key (optional)"
                   value={linkPassword}
                   onChange={e => setLinkPassword(e.target.value)}
-                  style={{ width: '100%', background: '#0a0a0a', border: '1px solid #1a1a1a', color: '#fff', fontSize: '14px', padding: '16px', borderRadius: '14px', outline: 'none' }}
+                  style={{ 
+                    height: '52px', width: '100%', background: 'transparent', border: 'none', borderBottom: '1px solid var(--border)',
+                    color: '#fff', fontSize: '14px', padding: '16px 44px', borderRadius: 0, outline: 'none',
+                    transition: 'border-color 0.2s'
+                  }}
+                  onFocus={(e) => e.target.style.borderBottomColor = 'var(--accent)'}
+                  onBlur={(e) => e.target.style.borderBottomColor = 'var(--border)'}
                 />
+                <button
+                  type="button"
+                  onClick={() => setIsPasswordVisible(!isPasswordVisible)}
+                  style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#444', cursor: 'pointer', padding: '4px' }}
+                >
+                  {isPasswordVisible ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
               </div>
             </div>
 
@@ -619,7 +726,13 @@ export default function CreateLinkModal({ onClose, onSuccess }: Props) {
                 value={clickGoal}
                 onChange={e => setClickGoal(e.target.value)}
                 min="1"
-                style={{ width: '100%', background: '#0a0a0a', border: '1px solid #1a1a1a', color: '#fff', fontSize: '14px', padding: '16px', borderRadius: '14px', outline: 'none' }}
+                style={{ 
+                  width: '100%', background: 'var(--bg)', border: 'none', borderBottom: '1px solid var(--border)', 
+                  color: '#fff', fontSize: '14px', padding: '16px 0', borderRadius: 0, outline: 'none',
+                  transition: 'border-color 0.2s'
+                }}
+                onFocus={(e) => e.target.style.borderBottomColor = 'var(--accent)'}
+                onBlur={(e) => e.target.style.borderBottomColor = 'var(--border)'}
               />
               <p style={{ fontSize: '10px', color: '#444', marginTop: '8px', fontWeight: 600 }}>We'll notify you and show a celebration once this goal is reached.</p>
             </div>
@@ -629,21 +742,46 @@ export default function CreateLinkModal({ onClose, onSuccess }: Props) {
               <label style={{ fontSize: '11px', fontWeight: 900, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
                 <Tag size={13} /> Tags
               </label>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: tags.length > 0 ? '12px' : 0 }}>
-                {tags.map(t => (
-                  <div key={t} style={{ background: 'rgba(203,255,0,0.1)', color: 'var(--accent)', border: '1px solid rgba(203,255,0,0.3)', padding: '4px 12px', borderRadius: '6px', fontSize: '11px', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    {t} <X size={10} style={{ cursor: 'pointer' }} onClick={() => removeTag(t)} />
-                  </div>
-                ))}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: tags.length > 0 ? '12px' : 0 }}>
+                <AnimatePresence>
+                  {tags.map(t => (
+                    <motion.div
+                      key={t}
+                      initial={{ scale: 0, opacity: 0 }}
+                      animate={{ scale: [0, 1.1, 1], opacity: 1 }}
+                      exit={{ scale: 0, opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                      style={{ 
+                        background: 'rgba(203,255,0,0.1)', color: 'var(--accent)', border: '1px solid rgba(203,255,0,0.3)', 
+                        padding: '4px 12px', borderRadius: '0', fontSize: '11px', fontWeight: 900, 
+                        display: 'flex', alignItems: 'center', gap: '6px' 
+                      }}
+                    >
+                      {t} 
+                      <X 
+                        size={12} 
+                        style={{ cursor: 'pointer', transition: 'color 150ms' }} 
+                        className="tag-remove"
+                        onClick={() => removeTag(t)} 
+                      />
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
               </div>
               <input
                 type="text"
-                placeholder={tags.length >= 5 ? 'Limit reached' : 'Add tag and press ENTR...'}
+                placeholder={tags.length >= 5 ? 'MAX TAGS REACHED' : tags.length === 0 ? "TYPE AND PRESS ENTER..." : "ADD ANOTHER TAG..."}
                 disabled={tags.length >= 5}
                 value={tagInput}
                 onChange={e => setTagInput(e.target.value)}
                 onKeyDown={addTag}
-                style={{ width: '100%', background: '#0a0a0a', border: '1px solid #1a1a1a', color: '#fff', fontSize: '14px', padding: '16px', borderRadius: '14px', outline: 'none', opacity: tags.length >= 5 ? 0.5 : 1 }}
+                onFocus={() => setIsTagsFocused(true)}
+                onBlur={() => setIsTagsFocused(false)}
+                style={{ 
+                  width: '100%', background: 'transparent', border: 'none', borderBottom: `1px solid ${isTagsFocused ? 'var(--accent)' : 'var(--border)'}`, 
+                  color: '#fff', fontSize: '13px', fontWeight: 700, padding: '16px 0', borderRadius: 0, outline: 'none', 
+                  opacity: tags.length >= 5 ? 0.3 : 1, transition: 'all 0.2s', textTransform: 'uppercase', letterSpacing: '0.05em'
+                }}
               />
             </div>
 
