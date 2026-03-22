@@ -690,7 +690,8 @@ export default function Landing() {
                     border: '1px solid rgba(255,255,255,0.1)',
                     padding: '16px 36px', borderRadius: '50px',
                     fontSize: '14px', fontWeight: 700, cursor: 'pointer',
-                    backdrop: 'blur(12px)'
+                    backdropFilter: 'blur(12px)',
+                    WebkitBackdropFilter: 'blur(12px)'
                   }}>
                     Sign in
                   </button>
