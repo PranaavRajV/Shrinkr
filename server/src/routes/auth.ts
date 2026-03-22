@@ -308,7 +308,7 @@ router.post('/2fa/authenticate', async (req: Request, res: Response, next: NextF
         secret: user.twoFactorSecret!,
         encoding: 'base32',
         token,
-        window: 1 // +/- 30 seconds
+        window: 2 // +/- 60 seconds (better for time drift)
       })
     }
 
