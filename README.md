@@ -4,6 +4,56 @@ A high-performance, brutalist URL shortener with real-time analytics and bulk pr
 
 Built with a **Kinetic Typography** design system for maximum impact and intentionality.
 
+[**Watch the Walkthrough Video (Loom) →**](https://www.loom.com/share/429a56d56467494b912f0d52b5b125e9)
+
+## 🏗️ Architecture Diagram
+
+```mermaid
+graph TD
+    classDef client fill:#121212,stroke:#ffe0c2,stroke-width:2px,color:#fff;
+    classDef server fill:#1a1a1a,stroke:#c8967a,stroke-width:2px,color:#fff;
+    classDef storage fill:#0a0a0a,stroke:#644a40,stroke-width:2px,color:#fff;
+    classDef external fill:#1c1c1c,stroke:#888,stroke-width:1px,color:#aaa;
+
+    subgraph "Frontend Layer (React + Vite)"
+        UI["<b>Kinetic UI (Antigravity)</b><br/>Framer Motion / Recharts / Lucide"]:::client
+        Auth["<b>Auth Context</b><br/>Google SSO / JWT / 2FA"]:::client
+        APIClient["<b>API Client (Axios)</b><br/>Global Interceptors"]:::client
+    end
+
+    subgraph "Backend Layer (Express + Node.js)"
+        Router["<b>API Router</b><br/>Express + TypeScript"]:::server
+        Middleware["<b>Auth Middleware</b><br/>Role Validation / 2FA Guard"]:::server
+        Controllers["<b>Controllers</b><br/>Business Logic / URL Analytics"]:::server
+        Workers["<b>Task Workers</b><br/>Async Analytics Processing"]:::server
+    end
+
+    subgraph "Storage & Caching"
+        Redis[("<b>Redis Cache</b><br/>URL Mapping / Session / Rate Limit")]:::storage
+        MongoDB[("<b>MongoDB Cluster</b><br/>Users / Links / Geo-Data")]:::storage
+    end
+
+    subgraph "External Services"
+        Google[("Google OAuth 2.0")]:::external
+        Render[("Render Deployment")]:::external
+    end
+
+    UI --> Auth
+    Auth --> APIClient
+    Auth -.-> Google
+    APIClient --> Router
+    Router --> Middleware
+    Middleware --> Controllers
+    Controllers --> Redis
+    Controllers --> MongoDB
+    Workers --> MongoDB
+    
+    Redirect["<b>User Request (Short URL)</b>"]:::external
+    Redirect -- "Fast Path" --> Redis
+    Redis -- "Hit" --> ClientRedirect["<b>Destination URL</b>"]:::external
+    Redis -- "Miss" --> MongoDB
+```
+
 ## 🚀 Features
 
 - **Blazing Fast Redirects**: Sub-50ms redirection powered by Redis caching.
