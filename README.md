@@ -6,6 +6,7 @@ Built with a **Kinetic Typography** design system for maximum impact and intenti
 
 [**Watch the Walkthrough Video (Loom) →**](https://www.loom.com/share/429a56d56467494b912f0d52b5b125e9)  
 [**Project Documentation (PDF) →**](./ZURL_BW.pdf)
+[**Deployed Link **](https://zurl.onrender.com/)
 
 ## 🏗️ Architecture Diagram
 
