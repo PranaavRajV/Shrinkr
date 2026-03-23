@@ -66,7 +66,7 @@ router.post('/verify-setup', requireAuth, async (req: Request, res: Response, ne
       secret,
       encoding: 'base32',
       token,
-      window: 2
+      window: 3 // Lenient for setup time drift (+/- 90s)
     })
 
     if (!valid) {
@@ -121,7 +121,7 @@ router.post('/disable', requireAuth, async (req: Request, res: Response, next: N
       secret: user.twoFactorSecret!,
       encoding: 'base32',
       token,
-      window: 2
+      window: 3 // Lenient for time drift (+/- 90s)
     })
 
     if (!valid) return fail(res, 400, 'Invalid 2FA code', 'INVALID_CODE')

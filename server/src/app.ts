@@ -61,6 +61,7 @@ const clientPath = path.join(__dirname, '../../client/dist')
 app.use(express.static(clientPath))
 
 // 3. API Routes
+app.use('/api/auth/2fa', twoFactorRoutes)
 app.use('/api/auth', authRoutes)
 app.use('/api/urls', urlRoutes)
 app.use('/api/analytics', analyticsRoutes)
@@ -68,7 +69,6 @@ app.use('/api/users', userRoutes)
 app.use('/api/stats', statsRouter)
 app.use('/api/bio', bioRoutes)
 app.use('/api/apikeys', apiKeyRoutes)
-app.use('/api/auth/2fa', twoFactorRoutes)
 app.use('/api/docs', docsRoutes)
 app.use('/api/ai', aiRoutes)
 

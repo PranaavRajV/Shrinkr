@@ -314,8 +314,8 @@ function TwoFactorModal({ action, onClose }: { action: 'setup' | 'disable' | nul
     try {
       const res = await api.post('/api/auth/2fa/setup');
       setSetupData(res.data.data);
-    } catch (err) {
-      toast.error('Failed to start setup');
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || 'Failed to start setup');
       onClose();
     }
   };
