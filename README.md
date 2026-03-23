@@ -97,3 +97,5 @@ The API follows a strict standardized response shape:
 
 ---
 Built for the **Katomaran Hackathon 2026**.
+
+This project is a part of a hackathon run by https://katomaran.com
