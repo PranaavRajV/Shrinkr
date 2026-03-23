@@ -30,8 +30,9 @@ router.post('/setup', requireAuth, async (req: Request, res: Response, next: Nex
       issuer: 'Shrinkr'
     })
 
-    const redis = await getRedisClient()
-    await redis.set(`2fa_setup:${userId}`, secret.base32, 'EX', 300)
+    // Store secret in User document temporarily (bypass Redis for reliability)
+    user.twoFactorSetupSecret = secret.base32
+    await user.save()
 
     const qrDataUrl = await QRCode.toDataURL(secret.otpauth_url!)
 
@@ -55,11 +56,12 @@ router.post('/verify-setup', requireAuth, async (req: Request, res: Response, ne
     if (!token) return fail(res, 400, 'Verification token required', 'TOKEN_REQUIRED')
 
     const userId = req.user!.id
-    const redis = await getRedisClient()
-    const secret = await redis.get(`2fa_setup:${userId}`)
+    const user = await User.findById(userId)
+    if (!user) return fail(res, 404, 'User not found', 'USER_NOT_FOUND')
 
+    const secret = user.twoFactorSetupSecret
     if (!secret) {
-      return fail(res, 400, '2FA setup session expired. Please restart setup.', 'SESSION_EXPIRED')
+      return fail(res, 400, '2FA setup session missing. Please restart setup.', 'SESSION_EXPIRED')
     }
 
     const valid = speakeasy.totp.verify({
@@ -72,9 +74,6 @@ router.post('/verify-setup', requireAuth, async (req: Request, res: Response, ne
     if (!valid) {
       return fail(res, 400, 'Invalid verification code', 'INVALID_CODE')
     }
-
-    const user = await User.findById(userId)
-    if (!user) return fail(res, 404, 'User not found', 'USER_NOT_FOUND')
 
     // Generate backup codes
     const rawBackupCodes = Array.from({ length: 8 }, () =>
@@ -89,8 +88,8 @@ router.post('/verify-setup', requireAuth, async (req: Request, res: Response, ne
     user.twoFactorSecret = secret
     user.twoFactorEnabled = true
     user.twoFactorBackupCodes = hashedBackupCodes
+    user.twoFactorSetupSecret = undefined // Clear the setup secret
     await user.save()
-    await redis.del(`2fa_setup:${userId}`)
 
     return ok(res, {
       backupCodes: rawBackupCodes,

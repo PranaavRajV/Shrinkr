@@ -27,6 +27,7 @@ export interface UserAttrs {
 
   // Feature 5: 2FA
   twoFactorSecret?: string
+  twoFactorSetupSecret?: string // Temporary secret during setup
   twoFactorEnabled?: boolean
   twoFactorBackupCodes?: string[]
 }
@@ -106,6 +107,7 @@ const UserSchema = new Schema<UserDocument, UserModel, UserMethods>(
     }],
     // 2FA Fields
     twoFactorSecret: { type: String, default: null },
+    twoFactorSetupSecret: { type: String, default: null },
     twoFactorEnabled: { type: Boolean, default: false },
     twoFactorBackupCodes: [{ type: String }]
   },
