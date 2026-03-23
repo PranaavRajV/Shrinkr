@@ -4,7 +4,8 @@ A high-performance, brutalist URL shortener with real-time analytics and bulk pr
 
 Built with a **Kinetic Typography** design system for maximum impact and intentionality.
 
-[**Watch the Walkthrough Video (Loom) →**](https://www.loom.com/share/429a56d56467494b912f0d52b5b125e9)
+[**Watch the Walkthrough Video (Loom) →**](https://www.loom.com/share/429a56d56467494b912f0d52b5b125e9)  
+[**Project Documentation (PDF) →**](./ZURL_BW.pdf)
 
 ## 🏗️ Architecture Diagram
 
